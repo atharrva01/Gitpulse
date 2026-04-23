@@ -272,7 +272,7 @@ function WrappedCard({ data, isOwn }: WrappedCardProps) {
           onClick={handleCopyPost}
           className="w-full bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white text-sm font-medium py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2"
         >
-          {postCopied ? '✓ Post idea copied!' : '✏ Copy post idea'}
+          {postCopied ? '✓ Copied to clipboard!' : 'Turn this into a personalized post'}
         </button>
 
         <div className="flex gap-2">
