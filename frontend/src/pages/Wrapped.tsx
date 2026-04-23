@@ -58,7 +58,7 @@ function MonthBar({ month, count, max }: { month: string; count: number; max: nu
   )
 }
 
-function buildPostIdea(data: WrappedStats, shareURL: string): string {
+function buildPostIdea(data: WrappedStats): string {
   const candidates = [
     { score: data.total_prs / 80, hook: `${data.total_prs}+ PRs merged in ${data.year} alone...` },
     { score: data.total_additions / 100_000, hook: `I added ${fmtLines(data.total_additions)} lines of code in ${data.year}...` },
@@ -142,7 +142,7 @@ function WrappedCard({ data, isOwn }: WrappedCardProps) {
   }
 
   function handleCopyPost() {
-    navigator.clipboard.writeText(buildPostIdea(data, shareURL))
+    navigator.clipboard.writeText(buildPostIdea(data))
     setPostCopied(true)
     setTimeout(() => setPostCopied(false), 2000)
   }
