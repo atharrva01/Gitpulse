@@ -25,7 +25,9 @@ export function Navbar({ user }: NavbarProps) {
             <>
               <Link to="/dashboard" className="text-sm text-gray-300 hover:text-white transition-colors">Dashboard</Link>
               <Link to="/repos" className="text-sm text-gray-300 hover:text-white transition-colors">Repos</Link>
-              <Link to={`/u/${user.login}`} className="text-sm text-gray-300 hover:text-white transition-colors">Public Profile</Link>
+              <Link to="/wrapped" className="text-sm text-gray-300 hover:text-white transition-colors">Wrapped</Link>
+              <Link to="/maintainer" className="text-sm text-gray-300 hover:text-white transition-colors">Maintainer</Link>
+              <Link to={`/u/${user.login}`} className="text-sm text-gray-300 hover:text-white transition-colors">Profile</Link>
               <Link to="/settings" className="text-sm text-gray-300 hover:text-white transition-colors">Settings</Link>
               <img src={user.avatar_url} alt={user.login} className="w-8 h-8 rounded-full border border-gray-600" />
               <button onClick={logout} className="text-sm text-gray-400 hover:text-white transition-colors">Logout</button>

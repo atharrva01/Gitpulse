@@ -7,6 +7,8 @@ import { Dashboard } from './pages/Dashboard'
 import { Repos } from './pages/Repos'
 import { PublicProfile } from './pages/PublicProfile'
 import { Settings } from './pages/Settings'
+import { Wrapped, PublicWrapped } from './pages/Wrapped'
+import { Maintainer } from './pages/Maintainer'
 
 const qc = new QueryClient({
   defaultOptions: {
@@ -42,6 +44,15 @@ export default function App() {
             path="/settings"
             element={<ProtectedRoute><Settings /></ProtectedRoute>}
           />
+          <Route
+            path="/wrapped"
+            element={<ProtectedRoute><Wrapped /></ProtectedRoute>}
+          />
+          <Route
+            path="/maintainer"
+            element={<ProtectedRoute><Maintainer /></ProtectedRoute>}
+          />
+          <Route path="/u/:login/wrapped" element={<PublicWrapped />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
