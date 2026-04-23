@@ -30,6 +30,9 @@ func (w *Worker) SyncUser(ctx context.Context, user *models.User, incremental bo
 	if err := w.syncReviews(ctx, client, user); err != nil {
 		log.Printf("sync reviews for %s: %v", user.Login, err)
 	}
+	if err := w.syncCommitDays(ctx, client, user, incremental); err != nil {
+		log.Printf("sync commit days for %s: %v", user.Login, err)
+	}
 	if err := w.rebuildRepoStats(ctx, user.ID); err != nil {
 		log.Printf("rebuild repo stats for %s: %v", user.Login, err)
 	}
@@ -122,6 +125,49 @@ func (w *Worker) syncReviews(ctx context.Context, client *ghclient.Client, user 
 			break
 		}
 		cursor = next
+	}
+	return nil
+}
+
+func (w *Worker) syncCommitDays(ctx context.Context, client *ghclient.Client, user *models.User, incremental bool) error {
+	now := time.Now().UTC()
+
+	// Build year windows to fetch. GitHub limits contributionsCollection to 1 year per call.
+	type window struct{ from, to time.Time }
+	var windows []window
+
+	if incremental {
+		windows = append(windows, window{now.AddDate(0, 0, -90), now})
+	} else {
+		// Go back to 2019 — covers the vast majority of contributors' active history
+		startYear := 2019
+		if now.Year() < startYear {
+			startYear = now.Year()
+		}
+		for y := startYear; y <= now.Year(); y++ {
+			from := time.Date(y, 1, 1, 0, 0, 0, 0, time.UTC)
+			to := time.Date(y, 12, 31, 23, 59, 59, 0, time.UTC)
+			if to.After(now) {
+				to = now
+			}
+			windows = append(windows, window{from, to})
+		}
+	}
+
+	for _, win := range windows {
+		days, err := client.FetchCommitDays(ctx, user.Login, win.from, win.to)
+		if err != nil {
+			return err
+		}
+		for _, d := range days {
+			t, err := time.Parse("2006-01-02", d)
+			if err != nil {
+				continue
+			}
+			if err := w.store.UpsertCommitDay(ctx, user.ID, t); err != nil {
+				log.Printf("upsert commit day %s for %s: %v", d, user.Login, err)
+			}
+		}
 	}
 	return nil
 }

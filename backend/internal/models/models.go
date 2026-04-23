@@ -71,6 +71,7 @@ type StreakDay struct {
 	Day       time.Time `db:"day" json:"day"`
 	HasPR     bool      `db:"has_pr" json:"has_pr"`
 	HasReview bool      `db:"has_review" json:"has_review"`
+	HasCommit bool      `db:"has_commit" json:"has_commit"`
 }
 
 type WatchedRepo struct {

@@ -221,9 +221,21 @@ func (s *Store) GetReviewLatency(ctx context.Context, userID int64) (map[string]
 
 func (s *Store) GetAllStreakDays(ctx context.Context, userID int64) ([]models.StreakDay, error) {
 	var days []models.StreakDay
+	// Only days with a commit or merged PR count toward streak — reviews excluded
 	err := s.db.SelectContext(ctx, &days, `
-		SELECT * FROM streak_days WHERE user_id = $1 ORDER BY day DESC`, userID)
+		SELECT * FROM streak_days
+		WHERE user_id = $1 AND (has_commit = true OR has_pr = true)
+		ORDER BY day DESC`, userID)
 	return days, err
+}
+
+func (s *Store) UpsertCommitDay(ctx context.Context, userID int64, day time.Time) error {
+	_, err := s.db.ExecContext(ctx, `
+		INSERT INTO streak_days (user_id, day, has_pr, has_review, has_commit)
+		VALUES ($1, $2::date, false, false, true)
+		ON CONFLICT (user_id, day) DO UPDATE SET has_commit = true`,
+		userID, day)
+	return err
 }
 
 func (s *Store) GetUsersForSync(ctx context.Context) ([]models.User, error) {

@@ -135,6 +135,61 @@ type ReviewNode struct {
 	} `json:"pullRequest"`
 }
 
+// FetchCommitDays returns dates (YYYY-MM-DD) where the user had ≥1 GitHub contribution
+// in the given time window (max 1 year per call — GitHub API limit).
+// Uses contributionCalendar, the same data source as GitHub's green-square graph.
+func (c *Client) FetchCommitDays(ctx context.Context, login string, from, to time.Time) ([]string, error) {
+	const q = `
+	query CommitDays($login: String!, $from: DateTime!, $to: DateTime!) {
+		user(login: $login) {
+			contributionsCollection(from: $from, to: $to) {
+				contributionCalendar {
+					weeks {
+						contributionDays {
+							date
+							contributionCount
+						}
+					}
+				}
+			}
+		}
+	}`
+
+	vars := map[string]interface{}{
+		"login": login,
+		"from":  from.UTC().Format(time.RFC3339),
+		"to":    to.UTC().Format(time.RFC3339),
+	}
+
+	var data struct {
+		User struct {
+			ContributionsCollection struct {
+				ContributionCalendar struct {
+					Weeks []struct {
+						ContributionDays []struct {
+							Date              string `json:"date"`
+							ContributionCount int    `json:"contributionCount"`
+						} `json:"contributionDays"`
+					} `json:"weeks"`
+				} `json:"contributionCalendar"`
+			} `json:"contributionsCollection"`
+		} `json:"user"`
+	}
+	if err := c.query(ctx, q, vars, &data); err != nil {
+		return nil, err
+	}
+
+	var days []string
+	for _, week := range data.User.ContributionsCollection.ContributionCalendar.Weeks {
+		for _, day := range week.ContributionDays {
+			if day.ContributionCount > 0 {
+				days = append(days, day.Date)
+			}
+		}
+	}
+	return days, nil
+}
+
 func (c *Client) FetchReviews(ctx context.Context, login, after string) ([]ReviewNode, bool, string, error) {
 	const q = `
 	query ContributorReviews($login: String!, $after: String) {
