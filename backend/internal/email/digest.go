@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"strings"
 	"time"
 
 	resend "github.com/resend/resend-go/v2"
 
 	"github.com/gitpulse/backend/internal/db"
+	"github.com/gitpulse/backend/internal/models"
 )
 
 type DigestSender struct {
@@ -56,10 +58,9 @@ func (d *DigestSender) SendWeeklyDigests(ctx context.Context) {
 		}
 
 		prs, _ := d.store.GetPRsLastWeek(ctx, u.ID)
-		prevScore := u.ImpactScore // in a real impl we'd store weekly snapshots
 
 		subject := fmt.Sprintf("Your GitPulse weekly — %s", time.Now().Format("Jan 2"))
-		html := d.buildHTML(u.Login, u.Name, u.ImpactScore, prevScore, u.CurrentStreak, prs)
+		html := d.buildHTML(u.Login, u.Name, u.ImpactScore, u.CurrentStreak, prs)
 
 		params := &resend.SendEmailRequest{
 			From:    d.from,
@@ -73,18 +74,10 @@ func (d *DigestSender) SendWeeklyDigests(ctx context.Context) {
 	}
 }
 
-func (d *DigestSender) buildHTML(login, name string, score, prevScore, streak int, prs interface{}) string {
+func (d *DigestSender) buildHTML(login, name string, score, streak int, prs []models.PullRequest) string {
 	displayName := name
 	if displayName == "" {
 		displayName = login
-	}
-
-	scoreDiff := score - prevScore
-	scoreDiffStr := fmt.Sprintf("%+d", scoreDiff)
-	if scoreDiff > 0 {
-		scoreDiffStr = `<span style="color:#22c55e">` + scoreDiffStr + `</span>`
-	} else if scoreDiff < 0 {
-		scoreDiffStr = `<span style="color:#ef4444">` + scoreDiffStr + `</span>`
 	}
 
 	streakMsg := "Keep your streak alive — contribute today."
@@ -92,6 +85,23 @@ func (d *DigestSender) buildHTML(login, name string, score, prevScore, streak in
 		streakMsg = fmt.Sprintf("You're on a 🔥 %d-day streak. Don't break it now.", streak)
 	} else if streak == 0 {
 		streakMsg = "Your streak reset. Start a new one today."
+	}
+
+	prRows := ""
+	if len(prs) == 0 {
+		prRows = `<p style="margin:0;color:#8b949e;font-size:14px">No PRs merged last week. Time to ship something! 🚀</p>`
+	} else {
+		var sb strings.Builder
+		for _, pr := range prs {
+			sb.WriteString(fmt.Sprintf(
+				`<div style="padding:10px 0;border-bottom:1px solid #30363d">
+          <a href="%s" style="color:#58a6ff;text-decoration:none;font-size:14px;font-weight:500">%s</a>
+          <p style="margin:2px 0 0;color:#8b949e;font-size:12px;font-family:monospace">%s</p>
+        </div>`,
+				pr.HTMLURL, pr.Title, pr.RepoFullName,
+			))
+		}
+		prRows = sb.String()
 	}
 
 	return fmt.Sprintf(`<!DOCTYPE html>
@@ -105,21 +115,24 @@ func (d *DigestSender) buildHTML(login, name string, score, prevScore, streak in
       <p style="margin:4px 0 0;color:#8b949e;font-size:14px">Weekly digest for %s</p>
     </div>
 
-    <div style="background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:20px;text-align:center;margin-bottom:20px">
-      <p style="margin:0 0 4px;color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:1px">Impact Score</p>
-      <p style="margin:0;font-size:48px;font-weight:900;color:#fff">%d</p>
-      <p style="margin:4px 0 0;font-size:14px;color:#8b949e">%s vs last week</p>
-    </div>
-
     <div style="display:flex;gap:12px;margin-bottom:20px">
       <div style="flex:1;background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:16px;text-align:center">
-        <p style="margin:0 0 4px;color:#8b949e;font-size:12px">🔥 Current Streak</p>
-        <p style="margin:0;font-size:24px;font-weight:700;color:#fff">%dd</p>
+        <p style="margin:0 0 4px;color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:1px">Impact Score</p>
+        <p style="margin:0;font-size:36px;font-weight:900;color:#fff">%d</p>
+      </div>
+      <div style="flex:1;background:#0d1117;border:1px solid #30363d;border-radius:8px;padding:16px;text-align:center">
+        <p style="margin:0 0 4px;color:#8b949e;font-size:12px;text-transform:uppercase;letter-spacing:1px">🔥 Streak</p>
+        <p style="margin:0;font-size:36px;font-weight:900;color:#fff">%dd</p>
       </div>
     </div>
 
     <div style="background:#1f2937;border:1px solid #374151;border-radius:8px;padding:16px;margin-bottom:20px">
       <p style="margin:0;font-size:14px;color:#d1d5db">%s</p>
+    </div>
+
+    <div style="margin-bottom:24px">
+      <p style="margin:0 0 12px;font-size:14px;font-weight:600;color:#fff">PRs merged last week</p>
+      %s
     </div>
 
     <div style="text-align:center;margin-top:24px">
@@ -134,5 +147,5 @@ func (d *DigestSender) buildHTML(login, name string, score, prevScore, streak in
   </div>
 </body>
 </html>`,
-		displayName, score, scoreDiffStr, streak, streakMsg, d.appURL, d.appURL)
+		displayName, score, streak, streakMsg, prRows, d.appURL, d.appURL)
 }

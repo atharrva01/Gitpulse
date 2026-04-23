@@ -161,6 +161,15 @@ func (s *Store) GetDashboardStats(ctx context.Context, userID int64) (*models.Da
 		return nil, err
 	}
 
+	syncStatus := "never"
+	if user.LastSyncedAt != nil {
+		if time.Since(*user.LastSyncedAt) < 5*time.Minute {
+			syncStatus = "fresh"
+		} else {
+			syncStatus = "synced"
+		}
+	}
+
 	return &models.DashboardStats{
 		User:           user,
 		TotalMergedPRs: stats.TotalMergedPRs,
@@ -172,6 +181,7 @@ func (s *Store) GetDashboardStats(ctx context.Context, userID int64) (*models.Da
 		ImpactScore:    user.ImpactScore,
 		CurrentStreak:  user.CurrentStreak,
 		LongestStreak:  user.LongestStreak,
+		SyncStatus:     syncStatus,
 	}, nil
 }
 

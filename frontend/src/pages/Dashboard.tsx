@@ -1,4 +1,4 @@
-import { useDashboard, useSync } from '../lib/hooks'
+import { useDashboard, useSync, useMe } from '../lib/hooks'
 import { StatCard } from '../components/StatCard'
 import { PRList } from '../components/PRList'
 import { ImpactScore } from '../components/ImpactScore'
@@ -16,6 +16,7 @@ function fmtDate(d: string | null): string {
 }
 
 export function Dashboard() {
+  const { data: me } = useMe()
   const { data, isLoading, error } = useDashboard()
   const sync = useSync()
   const fullSync = useSync(true)
@@ -23,7 +24,7 @@ export function Dashboard() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-950">
-        <Navbar />
+        <Navbar user={me} />
         <div className="flex items-center justify-center h-64">
           <div className="text-gray-400 animate-pulse">Loading your dashboard...</div>
         </div>
@@ -34,7 +35,7 @@ export function Dashboard() {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-950">
-        <Navbar />
+        <Navbar user={me} />
         <div className="flex items-center justify-center h-64">
           <div className="text-red-400">Failed to load dashboard. Try refreshing.</div>
         </div>

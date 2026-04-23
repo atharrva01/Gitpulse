@@ -8,7 +8,7 @@ export function Settings() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-950">
-        <Navbar />
+        <Navbar user={me} />
         <div className="flex items-center justify-center h-64">
           <div className="text-gray-400 animate-pulse">Loading...</div>
         </div>
