@@ -57,8 +57,61 @@ interface WrappedCardProps {
   isOwn: boolean
 }
 
+function buildPostIdea(data: WrappedStats, shareURL: string): string {
+  // Normalize each stat 0–1 against a "very impressive" ceiling, pick the winner as the hook
+  const candidates = [
+    {
+      score: data.total_prs / 80,
+      hook: `${data.total_prs}+ PRs merged in ${data.year} alone...`,
+    },
+    {
+      score: data.total_additions / 100_000,
+      hook: `I added ${fmtLines(data.total_additions)} lines of code in ${data.year}...`,
+    },
+    {
+      score: data.total_deletions / 50_000,
+      hook: `I deleted ${fmtLines(data.total_deletions)} lines of code in ${data.year}...`,
+    },
+    {
+      score: data.longest_streak / 100,
+      hook: `${data.longest_streak}-day open source streak in ${data.year}...`,
+    },
+    {
+      score: data.impact_score / 1000,
+      hook: `${data.impact_score}+ Impact Score for my ${data.year} open source contributions...`,
+    },
+  ]
+  const hook = [...candidates].sort((a, b) => b.score - a.score)[0].hook
+
+  const lines: string[] = [
+    hook,
+    '',
+    "I used to think open source contributions only mattered if they were huge.",
+    "But when all those small moments add up, they look like this:",
+    '',
+    `✨ Impact Score: ${data.impact_score}`,
+    `🔀 ${data.total_prs} PRs merged`,
+    `📦 ${data.unique_repos} repositories contributed to`,
+    `🧑‍💻 ${fmtLines(data.total_additions)} lines added`,
+    `🧹 ${fmtLines(data.total_deletions)} lines removed`,
+    `🔥 ${data.longest_streak}-day streak`,
+  ]
+
+  if (data.first_pr_title || data.last_pr_title) {
+    lines.push('')
+    if (data.first_pr_title) lines.push(`My first PR of ${data.year}: "${data.first_pr_title}"`)
+    if (data.last_pr_title)  lines.push(`My last PR: "${data.last_pr_title}"`)
+    lines.push('')
+    lines.push("That's what I love about building in public — tiny efforts, repeated consistently, become real impact.")
+  }
+
+  lines.push('', 'Still learning. Still shipping. Still getting started.', '', `See yours → ${shareURL}`)
+  return lines.join('\n')
+}
+
 function WrappedCard({ data, isOwn }: WrappedCardProps) {
   const [copied, setCopied] = useState(false)
+  const [postCopied, setPostCopied] = useState(false)
   const [downloading, setDownloading] = useState(false)
 
   const shareURL = `${window.location.origin}/u/${data.login}/wrapped?year=${data.year}`
@@ -90,6 +143,12 @@ function WrappedCard({ data, isOwn }: WrappedCardProps) {
     navigator.clipboard.writeText(shareURL)
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
+  }
+
+  function handleCopyPost() {
+    navigator.clipboard.writeText(buildPostIdea(data, shareURL))
+    setPostCopied(true)
+    setTimeout(() => setPostCopied(false), 2000)
   }
 
   return (
@@ -207,6 +266,13 @@ function WrappedCard({ data, isOwn }: WrappedCardProps) {
           ) : (
             <>↓ Download Image</>
           )}
+        </button>
+
+        <button
+          onClick={handleCopyPost}
+          className="w-full bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white text-sm font-medium py-2.5 rounded-xl transition-colors flex items-center justify-center gap-2"
+        >
+          {postCopied ? '✓ Post idea copied!' : '✏ Copy post idea'}
         </button>
 
         <div className="flex gap-2">
