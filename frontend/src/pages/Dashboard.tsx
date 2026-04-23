@@ -18,6 +18,7 @@ function fmtDate(d: string | null): string {
 export function Dashboard() {
   const { data, isLoading, error } = useDashboard()
   const sync = useSync()
+  const fullSync = useSync(true)
 
   if (isLoading) {
     return (
@@ -60,13 +61,24 @@ export function Dashboard() {
               )}
             </div>
           </div>
-          <button
-            onClick={() => sync.mutate()}
-            disabled={sync.isPending}
-            className="bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white text-sm px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
-          >
-            {sync.isPending ? 'Syncing...' : '↻ Sync'}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={() => sync.mutate()}
+              disabled={sync.isPending || fullSync.isPending}
+              className="bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white text-sm px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
+              title="Sync last 90 days"
+            >
+              {sync.isPending ? 'Syncing...' : '↻ Sync'}
+            </button>
+            <button
+              onClick={() => fullSync.mutate()}
+              disabled={sync.isPending || fullSync.isPending}
+              className="bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-400 text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
+              title="Full historical sync — fetches all PRs ever"
+            >
+              {fullSync.isPending ? 'Syncing all...' : '↻ Full'}
+            </button>
+          </div>
         </div>
 
         {/* Impact Score */}

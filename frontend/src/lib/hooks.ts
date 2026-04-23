@@ -39,17 +39,18 @@ export function usePublicProfile(login: string) {
   })
 }
 
-export function useSync() {
+export function useSync(full = false) {
   const qc = useQueryClient()
   return useMutation({
-    mutationFn: () => api.post('/sync'),
+    mutationFn: () => api.post(full ? '/sync?full=true' : '/sync'),
     onSuccess: () => {
+      const delay = full ? 15000 : 3000
       setTimeout(() => {
         qc.invalidateQueries({ queryKey: ['dashboard'] })
         qc.invalidateQueries({ queryKey: ['repos'] })
         qc.invalidateQueries({ queryKey: ['review-latency'] })
         qc.invalidateQueries({ queryKey: ['me'] })
-      }, 3000)
+      }, delay)
     },
   })
 }

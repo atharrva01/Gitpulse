@@ -1,5 +1,5 @@
 import { useParams } from 'react-router-dom'
-import { usePublicProfile } from '../lib/hooks'
+import { usePublicProfile, useMe } from '../lib/hooks'
 import { StatCard } from '../components/StatCard'
 import { PRList } from '../components/PRList'
 import { ImpactScore } from '../components/ImpactScore'
@@ -13,6 +13,7 @@ function fmtLines(n: number): string {
 
 export function PublicProfile() {
   const { login } = useParams<{ login: string }>()
+  const { data: me } = useMe()
   const { data, isLoading, error } = usePublicProfile(login || '')
 
   const badgeURL = `/badge/${login}`
@@ -21,7 +22,7 @@ export function PublicProfile() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-950">
-        <Navbar />
+        <Navbar user={me} />
         <div className="flex items-center justify-center h-64">
           <div className="text-gray-400 animate-pulse">Loading profile...</div>
         </div>
@@ -32,7 +33,7 @@ export function PublicProfile() {
   if (error) {
     return (
       <div className="min-h-screen bg-gray-950">
-        <Navbar />
+        <Navbar user={me} />
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <p className="text-gray-400 text-xl mb-2">Profile not found</p>

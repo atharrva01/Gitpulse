@@ -3,6 +3,7 @@ import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import api from '../lib/api'
 import { useMe } from '../lib/hooks'
+import { isAuthenticated } from '../lib/auth'
 import { Navbar } from '../components/Navbar'
 
 interface WrappedStats {
@@ -85,11 +86,11 @@ function WrappedCard({ data, isOwn }: WrappedCardProps) {
         </p>
       </div>
 
-      {/* Stats grid */}
+      {/* Stats grid — skip Reviews if 0 */}
       <div className="grid grid-cols-3 gap-4 mb-8">
         {[
           { label: 'Merged PRs', value: data.total_prs },
-          { label: 'Reviews', value: data.total_reviews },
+          ...(data.total_reviews > 0 ? [{ label: 'Reviews', value: data.total_reviews }] : []),
           { label: 'Repos', value: data.unique_repos },
           { label: 'Lines Added', value: fmtLines(data.total_additions) },
           { label: 'Lines Removed', value: fmtLines(data.total_deletions) },
@@ -195,7 +196,8 @@ function WrappedCard({ data, isOwn }: WrappedCardProps) {
 export function Wrapped() {
   const { data: me } = useMe()
   const currentYear = new Date().getFullYear()
-  const [year, setYear] = useState(currentYear - 1)
+  // Default to current year — contributor is likely most active now
+  const [year, setYear] = useState(currentYear)
 
   const { data, isLoading, error } = useQuery<WrappedStats>({
     queryKey: ['wrapped', year],
@@ -226,9 +228,21 @@ export function Wrapped() {
           <div className="text-center py-16 text-gray-400 animate-pulse">Generating your Wrapped...</div>
         )}
         {error && (
-          <div className="text-center py-16 text-red-400">Failed to load. Make sure you've synced your data.</div>
+          <div className="text-center py-16 text-red-400">Failed to load. Make sure you've synced your data first.</div>
         )}
-        {data && <WrappedCard data={data} isOwn />}
+        {data && data.total_prs === 0 && !isLoading && (
+          <div className="text-center py-16 bg-gray-900 border border-gray-700 rounded-xl">
+            <p className="text-gray-300 text-lg mb-2">No contributions found for {year}</p>
+            <p className="text-gray-500 text-sm mb-4">Try syncing your data first, or pick a different year.</p>
+            <button
+              onClick={() => setYear(year - 1)}
+              className="text-sm text-purple-400 hover:text-purple-300"
+            >
+              Try {year - 1} →
+            </button>
+          </div>
+        )}
+        {data && data.total_prs > 0 && <WrappedCard data={data} isOwn />}
       </div>
     </div>
   )
@@ -237,8 +251,9 @@ export function Wrapped() {
 // ── Public wrapped (no auth) ──────────────────────────────────────────────────
 export function PublicWrapped() {
   const { login } = useParams<{ login: string }>()
+  const { data: me } = useMe()
   const params = new URLSearchParams(window.location.search)
-  const year = Number(params.get('year') ?? new Date().getFullYear() - 1)
+  const year = Number(params.get('year') ?? new Date().getFullYear())
 
   const { data, isLoading, error } = useQuery<WrappedStats>({
     queryKey: ['wrapped-public', login, year],
@@ -248,7 +263,7 @@ export function PublicWrapped() {
 
   return (
     <div className="min-h-screen bg-gray-950">
-      <Navbar />
+      <Navbar user={isAuthenticated() ? me : undefined} />
       <div className="max-w-2xl mx-auto px-4 py-8">
         {isLoading && <div className="text-center py-16 text-gray-400 animate-pulse">Loading...</div>}
         {error && (
