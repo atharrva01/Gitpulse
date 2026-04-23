@@ -16,37 +16,39 @@ export function Repos() {
   const { data: latency } = useReviewLatency()
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen">
       <Navbar user={me} />
-      <div className="max-w-6xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold text-white mb-2">Repository Breakdown</h1>
-        <p className="text-gray-400 text-sm mb-8">All repositories you've contributed to, sorted by PR count.</p>
+
+      <div className="w-full px-4 sm:px-6 lg:px-10 py-8 sm:py-10 max-w-screen-2xl mx-auto">
+        <div className="mb-8">
+          <p className="text-[10px] text-emerald-400/50 uppercase tracking-[0.3em] font-semibold mb-2">Analytics</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Repository Breakdown</h1>
+          <p className="text-white/30 text-sm mt-1">Every repo you've shipped to, ranked by PR count.</p>
+        </div>
 
         {latency && latency.count > 0 && (
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-8">
-            <h2 className="text-white font-semibold mb-4">Review Latency</h2>
-            <p className="text-gray-400 text-sm mb-4">
-              How quickly you respond to PRs as a reviewer ({latency.count} reviews analyzed)
-            </p>
-            <div className="grid grid-cols-3 gap-4">
+          <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 sm:p-6 mb-6">
+            <p className="text-white font-bold text-xs uppercase tracking-widest mb-1">Review Latency</p>
+            <p className="text-white/30 text-xs mb-5">How fast you respond as a reviewer ({latency.count} reviews analyzed)</p>
+            <div className="grid grid-cols-3 gap-3">
               {[
                 { label: 'Median', value: fmtHours(latency.median) },
                 { label: 'p75', value: fmtHours(latency.p75) },
                 { label: 'p95', value: fmtHours(latency.p95) },
               ].map((s) => (
-                <div key={s.label} className="text-center bg-gray-800 rounded-lg p-4">
-                  <p className="text-xs text-gray-400 mb-1">{s.label}</p>
-                  <p className="text-2xl font-bold text-blue-400">{s.value}</p>
+                <div key={s.label} className="rounded-xl bg-white/[0.03] border border-white/[0.04] p-4 text-center">
+                  <p className="text-[10px] text-white/25 uppercase tracking-widest font-semibold mb-2">{s.label}</p>
+                  <p className="text-xl sm:text-2xl font-black text-emerald-400">{s.value}</p>
                 </div>
               ))}
             </div>
           </div>
         )}
 
-        <div className="bg-gray-900 border border-gray-700 rounded-xl p-6">
-          <h2 className="text-white font-semibold mb-4">All Repositories</h2>
+        <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 sm:p-6">
+          <p className="text-white font-bold text-xs uppercase tracking-widest mb-5">All Repositories</p>
           {isLoading ? (
-            <p className="text-gray-500 text-sm animate-pulse">Loading...</p>
+            <p className="text-white/25 text-sm animate-pulse">Loading...</p>
           ) : (
             <RepoTable repos={repos || []} />
           )}

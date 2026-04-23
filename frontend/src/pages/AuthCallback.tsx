@@ -7,20 +7,29 @@ export function AuthCallback() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
-    const token = params.get('token')
-    if (token) {
-      setToken(token)
-      navigate('/dashboard', { replace: true })
-    } else {
+    const code = params.get('code')
+    if (!code) {
       navigate('/', { replace: true })
+      return
     }
+    fetch(`/auth/token?code=${code}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.token) {
+          setToken(data.token)
+          navigate('/dashboard', { replace: true })
+        } else {
+          navigate('/', { replace: true })
+        }
+      })
+      .catch(() => navigate('/', { replace: true }))
   }, [navigate])
 
   return (
-    <div className="min-h-screen bg-gray-950 flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center">
       <div className="text-center">
-        <div className="text-purple-400 text-4xl mb-4 animate-pulse">⚡</div>
-        <p className="text-gray-400">Signing you in...</p>
+        <div className="text-cyan-400 text-4xl mb-4 animate-pulse">⚡</div>
+        <p className="text-slate-400 text-sm">Signing you in...</p>
       </div>
     </div>
   )

@@ -44,9 +44,9 @@ function daysAgo(date: string | null): string {
 }
 
 function staleBadge(days: number): { label: string; cls: string } {
-  if (days > 30) return { label: 'Stale', cls: 'bg-red-500/20 text-red-400 border-red-500/30' }
-  if (days > 14) return { label: 'Aging', cls: 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30' }
-  return { label: 'Active', cls: 'bg-green-500/20 text-green-400 border-green-500/30' }
+  if (days > 30) return { label: 'Stale', cls: 'bg-red-500/10 text-red-400 border-red-500/20' }
+  if (days > 14) return { label: 'Aging', cls: 'bg-amber-500/10 text-amber-400 border-amber-500/20' }
+  return { label: 'Active', cls: 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' }
 }
 
 function RepoDashboard({ id }: { id: number }) {
@@ -60,54 +60,46 @@ function RepoDashboard({ id }: { id: number }) {
     onSuccess: () => setTimeout(() => qc.invalidateQueries({ queryKey: ['maint-dash', id] }), 5000),
   })
 
-  if (isLoading) return <div className="text-gray-400 text-sm animate-pulse py-8 text-center">Loading dashboard...</div>
+  if (isLoading) return <div className="text-white/30 text-sm animate-pulse py-8 text-center">Loading dashboard...</div>
   if (!data) return null
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-white font-bold text-lg">
-            <a href={`https://github.com/${data.repo.repo_full_name}`} target="_blank" rel="noreferrer" className="hover:text-blue-400">
-              {data.repo.repo_full_name}
-            </a>
+          <h2 className="text-white font-bold text-base">
+            <a href={`https://github.com/${data.repo.repo_full_name}`} target="_blank" rel="noreferrer"
+              className="hover:text-emerald-400 transition-colors font-mono">{data.repo.repo_full_name}</a>
           </h2>
-          <p className="text-gray-400 text-sm">{data.total_open_prs} open PRs</p>
+          <p className="text-white/30 text-sm mt-0.5">{data.total_open_prs} open PRs</p>
         </div>
         <button
           onClick={() => refresh.mutate()}
           disabled={refresh.isPending}
-          className="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
+          className="text-xs bg-white/[0.05] hover:bg-white/[0.08] border border-white/[0.08] text-white px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50"
         >
           {refresh.isPending ? 'Refreshing...' : '↻ Refresh'}
         </button>
       </div>
 
-      {/* Contributors */}
       <div>
-        <h3 className="text-gray-300 font-medium text-sm mb-3 uppercase tracking-widest">Contributors</h3>
+        <p className="text-[10px] text-white/25 font-semibold uppercase tracking-widest mb-4">Contributors</p>
         {!data.contributors?.length ? (
-          <p className="text-gray-500 text-sm">No contributor data yet — refresh to fetch.</p>
+          <p className="text-white/25 text-sm">No contributor data — refresh to fetch.</p>
         ) : (
           <div className="space-y-2">
             {data.contributors.map((c) => {
               const { label, cls } = staleBadge(c.is_stale ? 60 : 10)
               return (
-                <div key={c.login} className="flex items-center gap-3 bg-gray-800/50 rounded-lg px-4 py-3">
-                  <img src={c.avatar_url} alt={c.login} className="w-8 h-8 rounded-full border border-gray-600" />
+                <div key={c.login} className="flex items-center gap-3 bg-white/[0.02] border border-white/[0.04] rounded-xl px-4 py-3">
+                  <img src={c.avatar_url} alt={c.login} className="w-8 h-8 rounded-xl ring-1 ring-white/10 shrink-0" />
                   <div className="flex-1 min-w-0">
-                    <a
-                      href={`https://github.com/${c.login}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-white font-medium text-sm hover:text-blue-400"
-                    >
-                      {c.login}
-                    </a>
-                    <p className="text-gray-400 text-xs">Last PR {daysAgo(c.last_pr_at)}</p>
+                    <a href={`https://github.com/${c.login}`} target="_blank" rel="noreferrer"
+                      className="text-white font-semibold text-sm hover:text-emerald-400 transition-colors">{c.login}</a>
+                    <p className="text-white/25 text-xs">Last PR {daysAgo(c.last_pr_at)}</p>
                   </div>
-                  <div className="flex items-center gap-3 text-sm">
-                    <span className="text-gray-300"><span className="font-bold text-white">{c.pr_count_30d}</span> PRs / 30d</span>
+                  <div className="flex items-center gap-3 shrink-0">
+                    <span className="text-white/30 text-xs"><span className="font-bold text-white">{c.pr_count_30d}</span> PRs/30d</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full border ${cls}`}>{label}</span>
                   </div>
                 </div>
@@ -117,32 +109,27 @@ function RepoDashboard({ id }: { id: number }) {
         )}
       </div>
 
-      {/* Open / stale PRs */}
       <div>
-        <h3 className="text-gray-300 font-medium text-sm mb-3 uppercase tracking-widest">
+        <p className="text-[10px] text-white/25 font-semibold uppercase tracking-widest mb-4">
           Open PRs {data.stale_prs?.length ? `(${data.stale_prs.length})` : ''}
-        </h3>
+        </p>
         {!data.stale_prs?.length ? (
-          <p className="text-gray-500 text-sm">No open PRs — or refresh to fetch latest.</p>
+          <p className="text-white/25 text-sm">No open PRs — refresh to fetch latest.</p>
         ) : (
-          <div className="divide-y divide-gray-700">
+          <div className="space-y-1">
             {data.stale_prs.slice(0, 20).map((pr) => {
               const { label, cls } = staleBadge(pr.days_open)
               return (
-                <div key={pr.number} className="py-3 flex items-start gap-3">
+                <div key={pr.number} className="py-3 flex items-start gap-3 border-b border-white/[0.03] last:border-0">
                   <div className="flex-1 min-w-0">
-                    <a
-                      href={pr.html_url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="text-sm text-blue-400 hover:text-blue-300 font-medium"
-                    >
+                    <a href={pr.html_url} target="_blank" rel="noreferrer"
+                      className="text-sm text-white/70 hover:text-white font-medium transition-colors">
                       #{pr.number} {pr.title}
                     </a>
-                    <p className="text-xs text-gray-500 mt-0.5">by @{pr.author_login}</p>
+                    <p className="text-xs text-white/25 mt-0.5 font-mono">by @{pr.author_login}</p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
-                    <span className="text-xs text-gray-400">{pr.days_open}d open</span>
+                    <span className="text-xs text-white/25">{pr.days_open}d open</span>
                     <span className={`text-xs px-2 py-0.5 rounded-full border ${cls}`}>{label}</span>
                   </div>
                 </div>
@@ -191,24 +178,25 @@ export function Maintainer() {
   const watchedCount = repos?.length ?? 0
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen">
       <Navbar user={me} />
-      <div className="max-w-5xl mx-auto px-4 py-8">
+
+      <div className="w-full px-4 sm:px-6 lg:px-10 py-8 sm:py-10 max-w-screen-2xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-2xl font-bold text-white">Maintainer Dashboard</h1>
-          <p className="text-gray-400 text-sm">Monitor contributor health and stale PRs across your repos.</p>
+          <p className="text-[10px] text-emerald-400/50 uppercase tracking-[0.3em] font-semibold mb-2">Maintainer</p>
+          <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight">Repo Dashboard</h1>
+          <p className="text-white/30 text-sm mt-1">Track contributor health and stale PRs across your repos.</p>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Sidebar — watched repos list */}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Sidebar */}
           <div className="lg:col-span-1">
-            <div className="bg-gray-900 border border-gray-700 rounded-xl p-5">
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 sticky top-20">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-white font-semibold text-sm">Watched Repos</h2>
-                <span className="text-xs text-gray-500">{watchedCount} / 3 free</span>
+                <p className="text-white font-bold text-xs uppercase tracking-widest">Watched</p>
+                <span className="text-[10px] text-white/25 font-mono">{watchedCount}/3</span>
               </div>
 
-              {/* Add repo */}
               <div className="mb-4">
                 <div className="flex gap-2">
                   <input
@@ -216,40 +204,35 @@ export function Maintainer() {
                     onChange={(e) => setAddInput(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter' && addInput) add.mutate(addInput.trim()) }}
                     placeholder="owner/repo"
-                    className="flex-1 bg-gray-800 border border-gray-600 text-white text-sm rounded-lg px-3 py-2 placeholder-gray-500 focus:outline-none focus:border-purple-500"
+                    className="flex-1 bg-white/[0.03] border border-white/[0.08] text-white text-xs rounded-lg px-3 py-2 placeholder-white/20 focus:outline-none focus:border-emerald-500/40 transition-colors"
                   />
                   <button
                     onClick={() => addInput && add.mutate(addInput.trim())}
                     disabled={add.isPending || watchedCount >= 3}
-                    className="bg-purple-600 hover:bg-purple-500 text-white text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-40"
+                    className="bg-emerald-500 hover:bg-emerald-400 text-black text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-40 font-bold"
                   >
                     +
                   </button>
                 </div>
-                {addError && <p className="text-red-400 text-xs mt-1">{addError}</p>}
-                {watchedCount >= 3 && (
-                  <p className="text-yellow-500 text-xs mt-1">Free tier: 3 repos max.</p>
-                )}
+                {addError && <p className="text-red-400 text-xs mt-1.5">{addError}</p>}
+                {watchedCount >= 3 && <p className="text-amber-400/60 text-xs mt-1.5">Free tier: 3 repos max.</p>}
               </div>
 
-              {/* List */}
               {!repos?.length ? (
-                <p className="text-gray-500 text-sm">No repos watched yet.</p>
+                <p className="text-white/25 text-xs">No repos watched yet.</p>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {repos.map((r) => (
                     <div
                       key={r.id}
-                      className={`flex items-center justify-between p-3 rounded-lg cursor-pointer transition-colors ${selected === r.id ? 'bg-purple-600/20 border border-purple-500/40' : 'bg-gray-800 hover:bg-gray-750 border border-transparent'}`}
+                      className={`flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all ${selected === r.id ? 'bg-emerald-500/10 border border-emerald-500/25' : 'bg-white/[0.02] border border-transparent hover:border-white/[0.06]'}`}
                       onClick={() => setSelected(r.id)}
                     >
-                      <span className="text-sm text-white font-mono truncate">{r.repo_full_name}</span>
+                      <span className="text-xs text-white font-mono truncate">{r.repo_full_name}</span>
                       <button
                         onClick={(e) => { e.stopPropagation(); remove.mutate(r.repo_full_name) }}
-                        className="text-gray-500 hover:text-red-400 text-lg leading-none ml-2 shrink-0"
-                      >
-                        ×
-                      </button>
+                        className="text-white/25 hover:text-red-400 text-lg leading-none ml-2 shrink-0 transition-colors"
+                      >×</button>
                     </div>
                   ))}
                 </div>
@@ -257,14 +240,14 @@ export function Maintainer() {
             </div>
           </div>
 
-          {/* Main panel */}
-          <div className="lg:col-span-2 bg-gray-900 border border-gray-700 rounded-xl p-6">
+          {/* Main */}
+          <div className="lg:col-span-3 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 sm:p-6">
             {selected ? (
               <RepoDashboard id={selected} />
             ) : (
-              <div className="flex flex-col items-center justify-center h-64 text-center">
-                <p className="text-gray-400 text-lg mb-2">Select a repo to view its dashboard</p>
-                <p className="text-gray-600 text-sm">Or add a repo you maintain using the panel on the left.</p>
+              <div className="flex flex-col items-center justify-center h-48 sm:h-64 text-center">
+                <p className="text-white/50 text-base font-semibold mb-2">Select a repo</p>
+                <p className="text-white/25 text-sm">Add a repo you maintain using the panel on the left.</p>
               </div>
             )}
           </div>

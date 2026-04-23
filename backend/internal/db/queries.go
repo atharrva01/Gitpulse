@@ -277,8 +277,10 @@ func (s *Store) GetScoreAggregates(ctx context.Context, userID int64) (ScoreAggr
 	if err := row.Scan(&agg.TotalPRs, &agg.TotalAdditions, &agg.TotalDeletions, &agg.UniqueRepos); err != nil {
 		return agg, err
 	}
-	_ = s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM reviews WHERE user_id=$1`, userID).
-		Scan(&agg.TotalReviews)
+	if err := s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM reviews WHERE user_id=$1`, userID).
+		Scan(&agg.TotalReviews); err != nil {
+		return agg, err
+	}
 	return agg, nil
 }
 

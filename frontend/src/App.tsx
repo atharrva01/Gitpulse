@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { isAuthenticated } from './lib/auth'
 import { Landing } from './pages/Landing'
@@ -9,6 +9,7 @@ import { PublicProfile } from './pages/PublicProfile'
 import { Settings } from './pages/Settings'
 import { Wrapped, PublicWrapped } from './pages/Wrapped'
 import { Maintainer } from './pages/Maintainer'
+import { AppCanvas } from './components/AppCanvas'
 
 const qc = new QueryClient({
   defaultOptions: {
@@ -24,10 +25,17 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
   return <>{children}</>
 }
 
+function GlobalCanvas() {
+  const loc = useLocation()
+  if (loc.pathname === '/') return null
+  return <AppCanvas />
+}
+
 export default function App() {
   return (
     <QueryClientProvider client={qc}>
       <BrowserRouter>
+        <GlobalCanvas />
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/auth/callback" element={<AuthCallback />} />

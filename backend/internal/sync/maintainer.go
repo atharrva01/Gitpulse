@@ -120,7 +120,6 @@ func (w *MaintainerWorker) syncContributors(ctx context.Context, client *ghclien
 		if cd.lastPR != nil {
 			staleDays = int(now.Sub(*cd.lastPR).Hours() / 24)
 		}
-		_ = cutoff30
 		c := &models.RepoContributor{
 			WatchedRepoID: wr.ID,
 			Login:         login,

@@ -38,6 +38,9 @@ func (c *Client) query(ctx context.Context, query string, variables map[string]i
 	}
 	defer resp.Body.Close()
 	data, _ := io.ReadAll(resp.Body)
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("GitHub GraphQL returned %d: %s", resp.StatusCode, string(data))
+	}
 
 	var wrapper struct {
 		Data   json.RawMessage `json:"data"`

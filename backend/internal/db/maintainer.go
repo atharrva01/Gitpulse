@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	"log"
 
 	"github.com/gitpulse/backend/internal/models"
 )
@@ -91,16 +92,22 @@ func (s *Store) GetMaintainerDashboard(ctx context.Context, watchedRepoID int64)
 	}
 
 	var contributors []models.RepoContributor
-	_ = s.db.SelectContext(ctx, &contributors,
-		`SELECT * FROM repo_contributors WHERE watched_repo_id=$1 ORDER BY pr_count_30d DESC`, watchedRepoID)
+	if err := s.db.SelectContext(ctx, &contributors,
+		`SELECT * FROM repo_contributors WHERE watched_repo_id=$1 ORDER BY pr_count_30d DESC`, watchedRepoID); err != nil {
+		log.Printf("get contributors for repo %d: %v", watchedRepoID, err)
+	}
 
 	var stalePRs []models.StalePR
-	_ = s.db.SelectContext(ctx, &stalePRs,
-		`SELECT * FROM stale_prs WHERE watched_repo_id=$1 ORDER BY days_open DESC`, watchedRepoID)
+	if err := s.db.SelectContext(ctx, &stalePRs,
+		`SELECT * FROM stale_prs WHERE watched_repo_id=$1 ORDER BY days_open DESC`, watchedRepoID); err != nil {
+		log.Printf("get stale PRs for repo %d: %v", watchedRepoID, err)
+	}
 
 	var totalOpen int
-	_ = s.db.GetContext(ctx, &totalOpen,
-		`SELECT COUNT(*) FROM stale_prs WHERE watched_repo_id=$1`, watchedRepoID)
+	if err := s.db.GetContext(ctx, &totalOpen,
+		`SELECT COUNT(*) FROM stale_prs WHERE watched_repo_id=$1`, watchedRepoID); err != nil {
+		log.Printf("get total open PRs for repo %d: %v", watchedRepoID, err)
+	}
 
 	return &models.MaintainerDashboard{
 		Repo:         wr,

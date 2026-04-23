@@ -3,6 +3,8 @@ import { StatCard } from '../components/StatCard'
 import { PRList } from '../components/PRList'
 import { ImpactScore } from '../components/ImpactScore'
 import { Navbar } from '../components/Navbar'
+import { BadgeCard } from '../components/BadgeCard'
+import { Link } from 'react-router-dom'
 
 function fmtLines(n: number): string {
   if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
@@ -23,10 +25,10 @@ export function Dashboard() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-gray-950">
+      <div className="min-h-screen">
         <Navbar user={me} />
         <div className="flex items-center justify-center h-64">
-          <div className="text-gray-400 animate-pulse">Loading your dashboard...</div>
+          <div className="text-white/30 animate-pulse text-sm">Loading your dashboard...</div>
         </div>
       </div>
     )
@@ -34,10 +36,10 @@ export function Dashboard() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-950">
+      <div className="min-h-screen">
         <Navbar user={me} />
         <div className="flex items-center justify-center h-64">
-          <div className="text-red-400">Failed to load dashboard. Try refreshing.</div>
+          <div className="text-red-400/80 text-sm">Failed to load dashboard. Try refreshing.</div>
         </div>
       </div>
     )
@@ -46,91 +48,129 @@ export function Dashboard() {
   const d = data!
 
   return (
-    <div className="min-h-screen bg-gray-950">
+    <div className="min-h-screen">
       <Navbar user={d.user} />
-      <div className="max-w-6xl mx-auto px-4 py-8">
+
+      <div className="w-full px-4 sm:px-6 lg:px-10 py-8 sm:py-10 max-w-screen-2xl mx-auto">
 
         {/* Header */}
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-8">
           <div className="flex items-center gap-4">
-            <img src={d.user.avatar_url} alt={d.user.login} className="w-14 h-14 rounded-full border-2 border-purple-500" />
+            <div className="relative shrink-0">
+              <img src={d.user.avatar_url} alt={d.user.login} className="w-12 h-12 sm:w-14 sm:h-14 rounded-2xl ring-1 ring-white/10" />
+              <div className="absolute inset-0 rounded-2xl ring-1 ring-emerald-500/20" />
+            </div>
             <div>
-              <h1 className="text-2xl font-bold text-white">{d.user.name || d.user.login}</h1>
-              <p className="text-gray-400 text-sm">@{d.user.login}</p>
+              <h1 className="text-lg sm:text-xl font-black text-white tracking-tight">{d.user.name || d.user.login}</h1>
+              <p className="text-white/40 text-sm">@{d.user.login}</p>
               {d.user.last_synced_at && (
-                <p className="text-gray-500 text-xs">Last synced {fmtDate(d.user.last_synced_at)}</p>
+                <p className="text-white/20 text-xs mt-0.5">Synced {fmtDate(d.user.last_synced_at)}</p>
               )}
             </div>
           </div>
-          <div className="flex gap-2">
+
+          <div className="flex items-center gap-2 flex-wrap">
+            <Link
+              to={`/u/${d.user.login}`}
+              className="text-xs text-white/40 hover:text-emerald-400 transition-colors px-3 py-2 rounded-lg hover:bg-white/[0.04] border border-transparent hover:border-white/[0.06]"
+            >
+              View profile →
+            </Link>
             <button
               onClick={() => sync.mutate()}
               disabled={sync.isPending || fullSync.isPending}
-              className="bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white text-sm px-4 py-2 rounded-lg transition-colors disabled:opacity-50"
-              title="Sync last 90 days"
+              className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/20 text-emerald-400 text-xs font-semibold px-4 py-2 rounded-lg transition-colors disabled:opacity-40"
             >
-              {sync.isPending ? 'Syncing...' : '↻ Sync'}
+              {sync.isPending ? '⟳ Syncing...' : '⟳ Sync'}
             </button>
             <button
               onClick={() => fullSync.mutate()}
               disabled={sync.isPending || fullSync.isPending}
-              className="bg-gray-800 hover:bg-gray-700 border border-gray-600 text-gray-400 text-sm px-3 py-2 rounded-lg transition-colors disabled:opacity-50"
-              title="Full historical sync — fetches all PRs ever"
+              className="bg-white/[0.03] hover:bg-white/[0.06] border border-white/[0.06] text-white/40 hover:text-white text-xs font-semibold px-3 py-2 rounded-lg transition-colors disabled:opacity-40"
             >
-              {fullSync.isPending ? 'Syncing all...' : '↻ Full'}
+              {fullSync.isPending ? 'Syncing all...' : 'Full sync'}
             </button>
           </div>
         </div>
 
         {/* Impact Score */}
-        <div className="bg-gradient-to-br from-purple-900/30 to-blue-900/20 border border-purple-500/30 rounded-xl p-8 mb-6 text-center">
-          <p className="text-gray-400 text-sm mb-4 uppercase tracking-widest font-medium">Impact Score</p>
+        <div className="relative rounded-2xl border border-white/[0.06] bg-[#060a06] p-8 sm:p-10 mb-6 text-center overflow-hidden">
+          <div
+            className="absolute inset-0 pointer-events-none opacity-40"
+            style={{
+              backgroundImage: 'linear-gradient(rgba(16,185,129,0.04) 1px, transparent 1px), linear-gradient(90deg, rgba(16,185,129,0.04) 1px, transparent 1px)',
+              backgroundSize: '40px 40px',
+            }}
+          />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-72 h-36 bg-emerald-500/10 blur-3xl pointer-events-none" />
+          <p className="text-[10px] text-white/25 uppercase tracking-[0.3em] font-semibold mb-6">Impact Score</p>
           <ImpactScore score={d.impact_score} size="lg" />
         </div>
 
         {/* Stats grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
-          <StatCard label="Merged PRs" value={d.total_merged_prs} />
-          <StatCard label="Lines Changed" value={fmtLines(d.total_additions + d.total_deletions)} sub={`+${fmtLines(d.total_additions)} -${fmtLines(d.total_deletions)}`} />
-          <StatCard label="Repositories" value={d.unique_repos} />
-          <StatCard label="🔥 Current Streak" value={`${d.current_streak}d`} sub={`Longest: ${d.longest_streak}d`} accent />
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+          <StatCard label="Merged PRs" value={d.total_merged_prs} icon="🔀" />
+          <StatCard label="Lines Changed" value={fmtLines(d.total_additions + d.total_deletions)} sub={`+${fmtLines(d.total_additions)}  −${fmtLines(d.total_deletions)}`} icon="📝" />
+          <StatCard label="Repositories" value={d.unique_repos} icon="📦" />
+          <StatCard label="Current Streak" value={`${d.current_streak}d`} sub={`Longest: ${d.longest_streak}d`} accent icon="🔥" />
         </div>
 
-        {/* Recent PRs */}
-        <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 mb-6">
-          <h2 className="text-white font-semibold mb-4">Recent Merged PRs</h2>
-          <PRList prs={d.recent_prs} />
-        </div>
+        {/* Bottom grid */}
+        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+          {/* Recent PRs */}
+          <div className="xl:col-span-2 rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 sm:p-6">
+            <div className="flex items-center justify-between mb-5">
+              <p className="text-white font-bold text-xs uppercase tracking-widest">Recent Merged PRs</p>
+              <Link to="/repos" className="text-xs text-white/30 hover:text-emerald-400 transition-colors">See all →</Link>
+            </div>
+            <PRList prs={d.recent_prs} />
+          </div>
 
-        {/* Top repos */}
-        {d.top_repos && d.top_repos.length > 0 && (
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6">
-            <h2 className="text-white font-semibold mb-4">Top Repositories</h2>
-            <div className="space-y-3">
-              {d.top_repos.map((r) => (
-                <div key={r.repo_full_name} className="flex items-center justify-between">
-                  <a
-                    href={`https://github.com/${r.repo_full_name}`}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-blue-400 hover:text-blue-300 text-sm font-mono"
-                  >
-                    {r.repo_full_name}
-                  </a>
-                  <div className="flex items-center gap-4 text-sm">
-                    <span className="text-gray-400">{r.pr_count} PRs</span>
-                    <div className="w-24 h-1.5 bg-gray-700 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-purple-500 rounded-full"
-                        style={{ width: `${Math.min((r.pr_count / (d.top_repos[0]?.pr_count || 1)) * 100, 100)}%` }}
-                      />
+          {/* Sidebar: badge + top repos */}
+          <div className="space-y-4">
+            {/* Impact Badge */}
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-white font-bold text-xs uppercase tracking-widest">Your Badge</p>
+                <Link to="/wrapped" className="text-xs text-white/30 hover:text-emerald-400 transition-colors">Full card →</Link>
+              </div>
+              <BadgeCard score={d.impact_score} login={d.user.login} compact />
+            </div>
+
+            {/* Top repos */}
+            <div className="rounded-2xl border border-white/[0.06] bg-white/[0.02] p-5 sm:p-6">
+              <p className="text-white font-bold text-xs uppercase tracking-widest mb-5">Top Repositories</p>
+              {d.top_repos && d.top_repos.length > 0 ? (
+                <div className="space-y-4">
+                  {d.top_repos.map((r) => (
+                    <div key={r.repo_full_name}>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <a
+                          href={`https://github.com/${r.repo_full_name}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-white/40 hover:text-emerald-400 font-mono truncate transition-colors"
+                        >
+                          {r.repo_full_name}
+                        </a>
+                        <span className="text-xs text-white/30 font-semibold shrink-0 ml-2">{r.pr_count} PRs</span>
+                      </div>
+                      <div className="h-1 bg-white/[0.04] rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full"
+                          style={{ width: `${Math.min((r.pr_count / (d.top_repos[0]?.pr_count || 1)) * 100, 100)}%` }}
+                        />
+                      </div>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
+              ) : (
+                <p className="text-white/20 text-xs">No repo data yet — sync to load.</p>
+              )}
             </div>
           </div>
-        )}
+        </div>
+
       </div>
     </div>
   )

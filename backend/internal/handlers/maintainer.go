@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -58,10 +59,13 @@ func (h *MaintainerHandler) AddWatched(c *gin.Context) {
 		return
 	}
 
-	user, _ := h.store.GetUserByID(ctx, uid)
-	go func() {
-		_ = h.worker.SyncRepo(context.Background(), user, wr)
-	}()
+	if user, err := h.store.GetUserByID(ctx, uid); err != nil {
+		log.Printf("AddWatched: get user %d: %v", uid, err)
+	} else {
+		go func() {
+			_ = h.worker.SyncRepo(context.Background(), user, wr)
+		}()
+	}
 
 	c.JSON(http.StatusCreated, wr)
 }
@@ -115,7 +119,11 @@ func (h *MaintainerHandler) RefreshRepo(c *gin.Context) {
 		c.JSON(http.StatusNotFound, gin.H{"error": "repo not found"})
 		return
 	}
-	user, _ := h.store.GetUserByID(ctx, uid)
+	user, err := h.store.GetUserByID(ctx, uid)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "user not found"})
+		return
+	}
 
 	go func() {
 		_ = h.worker.SyncRepo(context.Background(), user, wr)

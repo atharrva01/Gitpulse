@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"sync"
 	"syscall"
 	"time"
 
@@ -22,6 +23,10 @@ import (
 
 func main() {
 	_ = godotenv.Load()
+
+	if os.Getenv("JWT_SECRET") == "" {
+		log.Fatal("JWT_SECRET environment variable is not set")
+	}
 
 	database, err := db.New()
 	if err != nil {
@@ -59,6 +64,7 @@ func main() {
 	// Auth
 	r.GET("/auth/github", authH.Login)
 	r.GET("/auth/github/callback", authH.Callback)
+	r.GET("/auth/token", authH.ExchangeToken)
 
 	// Protected
 	api := r.Group("/api")
@@ -88,7 +94,7 @@ func main() {
 
 	cr := cron.New()
 
-	// Daily user sync at 3am
+	// Daily user sync at 3am — semaphore limits concurrent syncs to 5
 	cr.AddFunc("0 3 * * *", func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Hour)
 		defer cancel()
@@ -98,15 +104,21 @@ func main() {
 			return
 		}
 		log.Printf("cron sync: syncing %d users", len(users))
+		sem := make(chan struct{}, 5)
+		var wg sync.WaitGroup
 		for i := range users {
-			time.Sleep(time.Second)
 			u := users[i]
+			sem <- struct{}{}
+			wg.Add(1)
 			go func() {
+				defer wg.Done()
+				defer func() { <-sem }()
 				if err := worker.SyncUser(ctx, &u, true); err != nil {
 					log.Printf("cron sync user %s: %v", u.Login, err)
 				}
 			}()
 		}
+		wg.Wait()
 	})
 
 	// Weekly email digest: Mondays at 8am UTC

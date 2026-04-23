@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"context"
+	"log"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -57,7 +58,9 @@ func (h *DashboardHandler) Sync(c *gin.Context) {
 	incremental := c.Query("full") != "true"
 
 	go func() {
-		_ = h.worker.SyncUser(context.Background(), user, incremental)
+		if err := h.worker.SyncUser(context.Background(), user, incremental); err != nil {
+			log.Printf("background sync for %s: %v", user.Login, err)
+		}
 	}()
 
 	c.JSON(http.StatusAccepted, gin.H{"message": "sync started", "full": !incremental})

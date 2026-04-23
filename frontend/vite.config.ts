@@ -8,6 +8,7 @@ export default defineConfig({
     proxy: {
       '/api': 'http://localhost:8080',
       '/auth/github': 'http://localhost:8080',
+      '/auth/token': 'http://localhost:8080',
       '/u': 'http://localhost:8080',
       '/badge': 'http://localhost:8080',
     },
