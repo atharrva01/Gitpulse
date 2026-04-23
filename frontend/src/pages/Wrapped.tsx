@@ -84,7 +84,7 @@ function buildPostIdea(data: WrappedStats, shareURL: string): string {
     if (data.last_pr_title) lines.push(`Last PR: "${data.last_pr_title}"`)
     lines.push('', "That's what building in public looks like — tiny efforts, repeated, become real impact.")
   }
-  lines.push('', 'Still learning. Still shipping.', '', `See yours → ${shareURL}`)
+  lines.push('', 'Still learning. Still shipping.', '', `See yours → ${window.location.origin}`)
   return lines.join('\n')
 }
 
