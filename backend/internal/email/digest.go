@@ -136,7 +136,7 @@ func (d *DigestSender) buildHTML(login, name string, score, streak int, prs []mo
     </div>
 
     <div style="text-align:center;margin-top:24px">
-      <a href="%s/dashboard" style="background:#7c3aed;color:#fff;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;display:inline-block">
+      <a href="%s/dashboard" style="background:#10b981;color:#000;text-decoration:none;padding:12px 24px;border-radius:8px;font-size:14px;font-weight:600;display:inline-block">
         View Dashboard →
       </a>
     </div>

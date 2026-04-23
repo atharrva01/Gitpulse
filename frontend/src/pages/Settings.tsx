@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useMe, useUpdateSettings } from '../lib/hooks'
 import { Navbar } from '../components/Navbar'
 
@@ -5,6 +6,14 @@ export function Settings() {
   const { data: me, isLoading } = useMe()
   const update = useUpdateSettings()
   const updateError = update.isError ? 'Failed to save. Try again.' : null
+  const [badgeCopied, setBadgeCopied] = useState(false)
+
+  function copyBadgeMarkdown() {
+    const md = `[![GitPulse](${window.location.origin}/badge/${me?.login})](${window.location.origin}/u/${me?.login})`
+    navigator.clipboard.writeText(md)
+    setBadgeCopied(true)
+    setTimeout(() => setBadgeCopied(false), 2000)
+  }
 
   if (isLoading) {
     return (
@@ -88,7 +97,19 @@ export function Settings() {
                 <img src={`/badge/${me?.login}`} alt="Your GitPulse badge" style={{ height: 44 }} />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="text-[10px] text-white/25 uppercase tracking-widest font-semibold mb-2.5">Markdown</p>
+                <div className="flex items-center justify-between mb-2.5">
+                  <p className="text-[10px] text-white/25 uppercase tracking-widest font-semibold">Markdown</p>
+                  <button
+                    onClick={copyBadgeMarkdown}
+                    className="text-xs px-3 py-1 rounded-lg transition-colors"
+                    style={badgeCopied
+                      ? { background: 'rgba(16,185,129,0.12)', color: '#34d399', border: '1px solid rgba(16,185,129,0.25)' }
+                      : { background: 'rgba(255,255,255,0.04)', color: 'rgba(255,255,255,0.4)', border: '1px solid rgba(255,255,255,0.08)' }
+                    }
+                  >
+                    {badgeCopied ? '✓ Copied!' : 'Copy'}
+                  </button>
+                </div>
                 <code className="block bg-black/40 text-emerald-400 text-xs p-4 rounded-xl font-mono overflow-x-auto border border-white/[0.04]">
                   {`[![GitPulse](${window.location.origin}/badge/${me?.login})](${window.location.origin}/u/${me?.login})`}
                 </code>
