@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -52,11 +53,14 @@ func (h *DashboardHandler) Sync(c *gin.Context) {
 		return
 	}
 
+	// ?full=true forces a complete historical re-sync
+	incremental := c.Query("full") != "true"
+
 	go func() {
-		_ = h.worker.SyncUser(c.Request.Context(), user, true)
+		_ = h.worker.SyncUser(context.Background(), user, incremental)
 	}()
 
-	c.JSON(http.StatusAccepted, gin.H{"message": "sync started"})
+	c.JSON(http.StatusAccepted, gin.H{"message": "sync started", "full": !incremental})
 }
 
 func (h *DashboardHandler) UpdateSettings(c *gin.Context) {

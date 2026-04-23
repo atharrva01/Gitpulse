@@ -20,9 +20,6 @@ func NewWorker(store *db.Store) *Worker {
 	return &Worker{store: store}
 }
 
-// SyncUser performs a full or incremental sync for a user.
-// incremental = true: fetch last 90 days only (faster)
-// incremental = false: fetch all history
 func (w *Worker) SyncUser(ctx context.Context, user *models.User, incremental bool) error {
 	client := ghclient.New(user.GitHubToken)
 
@@ -33,15 +30,14 @@ func (w *Worker) SyncUser(ctx context.Context, user *models.User, incremental bo
 	if err := w.syncReviews(ctx, client, user); err != nil {
 		log.Printf("sync reviews for %s: %v", user.Login, err)
 	}
-
 	if err := w.rebuildRepoStats(ctx, user.ID); err != nil {
 		log.Printf("rebuild repo stats for %s: %v", user.Login, err)
 	}
 	if err := w.store.RebuildStreakDays(ctx, user.ID); err != nil {
 		log.Printf("rebuild streak days for %s: %v", user.Login, err)
 	}
-	if err := w.rebuildStreaks(ctx, user); err != nil {
-		log.Printf("rebuild streaks for %s: %v", user.Login, err)
+	if err := w.rebuildScores(ctx, user.ID); err != nil {
+		log.Printf("rebuild scores for %s: %v", user.Login, err)
 	}
 
 	return w.store.UpdateSyncStatus(ctx, user.ID)
@@ -52,7 +48,6 @@ func (w *Worker) syncPRs(ctx context.Context, client *ghclient.Client, user *mod
 	if incremental {
 		cutoff = time.Now().AddDate(0, 0, -90)
 	}
-
 	cursor := ""
 	for {
 		res, err := client.FetchMergedPRs(ctx, user.Login, cursor)
@@ -135,23 +130,37 @@ func (w *Worker) rebuildRepoStats(ctx context.Context, userID int64) error {
 	return w.store.RebuildRepoStats(ctx, userID)
 }
 
-func (w *Worker) rebuildStreaks(ctx context.Context, user *models.User) error {
-	days, err := w.store.GetAllStreakDays(ctx, user.ID)
+func (w *Worker) rebuildScores(ctx context.Context, userID int64) error {
+	// Fetch all streak days
+	days, err := w.store.GetAllStreakDays(ctx, userID)
 	if err != nil {
 		return err
 	}
 
-	// Build set of active days
-	daySet := make(map[string]bool)
+	// Fetch real aggregates for impact score
+	agg, err := w.store.GetScoreAggregates(ctx, userID)
+	if err != nil {
+		return err
+	}
+
+	current, longest := computeStreaks(days)
+	impact := computeImpactScore(agg, current)
+	return w.store.UpdateScores(ctx, userID, impact, current, longest)
+}
+
+// computeStreaks returns (currentStreak, longestStreak) from streak day records.
+// A streak breaks if there is no active day on today OR yesterday (grace period).
+// Uses string date comparison to avoid any timezone/DST edge cases.
+func computeStreaks(days []models.StreakDay) (current, longest int) {
+	if len(days) == 0 {
+		return 0, 0
+	}
+
+	daySet := make(map[string]bool, len(days))
 	for _, d := range days {
-		daySet[d.Day.Format("2006-01-02")] = true
+		daySet[d.Day.UTC().Format("2006-01-02")] = true
 	}
 
-	if len(daySet) == 0 {
-		return w.store.UpdateScores(ctx, user.ID, 0, 0, 0)
-	}
-
-	// Sort days descending
 	sorted := make([]string, 0, len(daySet))
 	for d := range daySet {
 		sorted = append(sorted, d)
@@ -159,31 +168,29 @@ func (w *Worker) rebuildStreaks(ctx context.Context, user *models.User) error {
 	sort.Sort(sort.Reverse(sort.StringSlice(sorted)))
 
 	today := time.Now().UTC().Format("2006-01-02")
-	yesterday := time.Now().UTC().AddDate(0, 0, -1).Format("2006-01-02")
+	yesterday := addDays(today, -1)
 
-	current := 0
+	// Current streak: walk back from today/yesterday
+	current = 0
 	if daySet[today] || daySet[yesterday] {
-		prev := sorted[0]
-		current = 1
-		for i := 1; i < len(sorted); i++ {
-			prevT, _ := time.Parse("2006-01-02", prev)
-			currT, _ := time.Parse("2006-01-02", sorted[i])
-			if prevT.Sub(currT) == 24*time.Hour {
-				current++
-				prev = sorted[i]
-			} else {
+		anchor := today
+		if !daySet[today] {
+			anchor = yesterday
+		}
+		for {
+			if !daySet[anchor] {
 				break
 			}
+			current++
+			anchor = addDays(anchor, -1)
 		}
 	}
 
-	// Compute longest streak
-	longest := 0
+	// Longest streak: single pass over sorted unique days
+	longest = 0
 	run := 1
 	for i := 1; i < len(sorted); i++ {
-		prevT, _ := time.Parse("2006-01-02", sorted[i-1])
-		currT, _ := time.Parse("2006-01-02", sorted[i])
-		if prevT.Sub(currT) == 24*time.Hour {
+		if addDays(sorted[i], 1) == sorted[i-1] { // consecutive
 			run++
 		} else {
 			if run > longest {
@@ -198,35 +205,28 @@ func (w *Worker) rebuildStreaks(ctx context.Context, user *models.User) error {
 	if current > longest {
 		longest = current
 	}
-
-	impact := computeImpactScore(user, days)
-	return w.store.UpdateScores(ctx, user.ID, impact, current, longest)
+	return current, longest
 }
 
-// Impact Score formula (0-1000):
-//   - Merged PRs × 5, capped at 400
-//   - Lines changed: log(additions+deletions+1) × 20, capped at 200
-//   - Reviews × 8, capped at 200
-//   - Current streak × 2, capped at 100
-//   - Unique repos × 5, capped at 100
-func computeImpactScore(user *models.User, days []models.StreakDay) int {
-	// These will be computed properly after full sync; placeholder uses user fields
-	// In a real call we'd pass aggregates, but streak days give us a proxy
-	prDays := 0
-	reviewDays := 0
-	for _, d := range days {
-		if d.HasPR {
-			prDays++
-		}
-		if d.HasReview {
-			reviewDays++
-		}
-	}
+// addDays adds n days to a "2006-01-02" date string and returns a new one.
+func addDays(date string, n int) string {
+	t, _ := time.Parse("2006-01-02", date)
+	return t.AddDate(0, 0, n).Format("2006-01-02")
+}
+
+// Impact Score (0–1000):
+//   400 — merged PRs × 5
+//   200 — log(lines_changed+1) × 20
+//   200 — reviews × 8
+//   100 — current streak × 2
+//   100 — unique repos × 5
+func computeImpactScore(agg db.ScoreAggregates, currentStreak int) int {
 	score := 0
-	score += min(prDays*5, 400)
-	score += min(int(math.Log(float64(prDays+reviewDays+1))*20), 200)
-	score += min(reviewDays*8, 200)
-	score += min(user.CurrentStreak*2, 100)
+	score += min(agg.TotalPRs*5, 400)
+	score += min(int(math.Log(float64(agg.TotalAdditions+agg.TotalDeletions+1))*20), 200)
+	score += min(agg.TotalReviews*8, 200)
+	score += min(currentStreak*2, 100)
+	score += min(agg.UniqueRepos*5, 100)
 	return min(score, 1000)
 }
 

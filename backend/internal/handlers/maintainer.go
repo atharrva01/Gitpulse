@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -59,7 +60,7 @@ func (h *MaintainerHandler) AddWatched(c *gin.Context) {
 
 	user, _ := h.store.GetUserByID(ctx, uid)
 	go func() {
-		_ = h.worker.SyncRepo(c.Request.Context(), user, wr)
+		_ = h.worker.SyncRepo(context.Background(), user, wr)
 	}()
 
 	c.JSON(http.StatusCreated, wr)
@@ -117,7 +118,7 @@ func (h *MaintainerHandler) RefreshRepo(c *gin.Context) {
 	user, _ := h.store.GetUserByID(ctx, uid)
 
 	go func() {
-		_ = h.worker.SyncRepo(ctx, user, wr)
+		_ = h.worker.SyncRepo(context.Background(), user, wr)
 	}()
 
 	c.JSON(http.StatusAccepted, gin.H{"message": "refresh started"})

@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"net/http"
@@ -71,11 +72,10 @@ func (h *AuthHandler) Callback(c *gin.Context) {
 		return
 	}
 
-	// Kick off background sync
+	// Kick off background sync with a fresh context — request context is cancelled on redirect
 	isFirstSync := user.LastSyncedAt == nil
 	go func() {
-		ctx := c.Request.Context()
-		_ = h.worker.SyncUser(ctx, user, !isFirstSync)
+		_ = h.worker.SyncUser(context.Background(), user, !isFirstSync)
 	}()
 
 	jwt, err := auth.IssueJWT(user.ID, user.Login)

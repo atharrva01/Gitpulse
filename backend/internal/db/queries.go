@@ -236,6 +236,30 @@ func (s *Store) UpdatePublicProfile(ctx context.Context, userID int64, isPublic 
 	return err
 }
 
+type ScoreAggregates struct {
+	TotalPRs       int
+	TotalReviews   int
+	TotalAdditions int
+	TotalDeletions int
+	UniqueRepos    int
+}
+
+func (s *Store) GetScoreAggregates(ctx context.Context, userID int64) (ScoreAggregates, error) {
+	var agg ScoreAggregates
+	row := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(*),
+		       COALESCE(SUM(additions),0),
+		       COALESCE(SUM(deletions),0),
+		       COUNT(DISTINCT repo_full_name)
+		FROM pull_requests WHERE user_id=$1 AND state='merged'`, userID)
+	if err := row.Scan(&agg.TotalPRs, &agg.TotalAdditions, &agg.TotalDeletions, &agg.UniqueRepos); err != nil {
+		return agg, err
+	}
+	_ = s.db.QueryRowContext(ctx, `SELECT COUNT(*) FROM reviews WHERE user_id=$1`, userID).
+		Scan(&agg.TotalReviews)
+	return agg, nil
+}
+
 func (s *Store) RebuildRepoStats(ctx context.Context, userID int64) error {
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO repo_stats (user_id, repo_full_name, pr_count, review_count, total_additions, total_deletions, first_contrib, last_contrib, updated_at)
@@ -275,22 +299,24 @@ func (s *Store) RebuildRepoStats(ctx context.Context, userID int64) error {
 }
 
 func (s *Store) RebuildStreakDays(ctx context.Context, userID int64) error {
-	// Insert streak days from PRs
+	// GROUP BY deduplicates multiple PRs/reviews on the same day before the upsert,
+	// preventing the "ON CONFLICT DO UPDATE cannot affect row a second time" error.
 	_, err := s.db.ExecContext(ctx, `
 		INSERT INTO streak_days (user_id, day, has_pr, has_review)
 		SELECT user_id, merged_at::date AS day, true, false
 		FROM pull_requests
 		WHERE user_id = $1 AND merged_at IS NOT NULL AND state = 'merged'
+		GROUP BY user_id, merged_at::date
 		ON CONFLICT (user_id, day) DO UPDATE SET has_pr = true`, userID)
 	if err != nil {
 		return err
 	}
-	// Insert streak days from reviews
 	_, err = s.db.ExecContext(ctx, `
 		INSERT INTO streak_days (user_id, day, has_pr, has_review)
 		SELECT user_id, submitted_at::date AS day, false, true
 		FROM reviews
 		WHERE user_id = $1
+		GROUP BY user_id, submitted_at::date
 		ON CONFLICT (user_id, day) DO UPDATE SET has_review = true`, userID)
 	return err
 }
