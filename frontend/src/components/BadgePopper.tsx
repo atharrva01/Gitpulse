@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState } from 'react'
 import { getBadge, getNextBadge, BADGE_TIERS } from '../lib/badges'
 import { toPng } from 'html-to-image'
 
