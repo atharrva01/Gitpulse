@@ -15,6 +15,7 @@ import (
 	"github.com/rs/cors"
 
 	"github.com/gitpulse/backend/internal/db"
+	"github.com/gitpulse/backend/internal/email"
 	"github.com/gitpulse/backend/internal/handlers"
 	syncer "github.com/gitpulse/backend/internal/sync"
 )
@@ -29,14 +30,17 @@ func main() {
 
 	store := db.NewStore(database)
 	worker := syncer.NewWorker(store)
+	maintWorker := syncer.NewMaintainerWorker(store)
+	digestSender := email.NewDigestSender(store)
 
 	authH := handlers.NewAuthHandler(store, worker)
 	dashH := handlers.NewDashboardHandler(store, worker)
 	pubH := handlers.NewPublicHandler(store)
+	wrappedH := handlers.NewWrappedHandler(store)
+	maintH := handlers.NewMaintainerHandler(store, maintWorker)
 
 	r := gin.Default()
 
-	// CORS
 	frontendURL := os.Getenv("FRONTEND_URL")
 	if frontendURL == "" {
 		frontendURL = "http://localhost:5173"
@@ -52,11 +56,11 @@ func main() {
 		c.Next()
 	})
 
-	// Auth routes
+	// Auth
 	r.GET("/auth/github", authH.Login)
 	r.GET("/auth/github/callback", authH.Callback)
 
-	// Protected routes
+	// Protected
 	api := r.Group("/api")
 	api.Use(handlers.AuthMiddleware())
 	{
@@ -66,16 +70,26 @@ func main() {
 		api.GET("/review-latency", dashH.ReviewLatency)
 		api.POST("/sync", dashH.Sync)
 		api.PATCH("/settings", dashH.UpdateSettings)
+
+		api.GET("/wrapped", wrappedH.Get)
+
+		api.GET("/maintainer/repos", maintH.ListWatched)
+		api.POST("/maintainer/repos", maintH.AddWatched)
+		api.DELETE("/maintainer/repos/:repo", maintH.RemoveWatched)
+		api.GET("/maintainer/repos/:id/dashboard", maintH.GetDashboard)
+		api.POST("/maintainer/repos/:id/refresh", maintH.RefreshRepo)
 	}
 
-	// Public routes (no auth)
+	// Public
 	r.GET("/u/:login", pubH.Profile)
+	r.GET("/u/:login/wrapped", wrappedH.GetPublic)
 	r.GET("/badge/:login", pubH.Badge)
 	r.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
 
-	// Background cron: daily sync of all users, staggered
-	c := cron.New()
-	c.AddFunc("0 3 * * *", func() {
+	cr := cron.New()
+
+	// Daily user sync at 3am
+	cr.AddFunc("0 3 * * *", func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Hour)
 		defer cancel()
 		users, err := store.GetUsersForSync(ctx)
@@ -85,7 +99,7 @@ func main() {
 		}
 		log.Printf("cron sync: syncing %d users", len(users))
 		for i := range users {
-			time.Sleep(time.Second) // stagger to avoid rate limit spikes
+			time.Sleep(time.Second)
 			u := users[i]
 			go func() {
 				if err := worker.SyncUser(ctx, &u, true); err != nil {
@@ -94,7 +108,15 @@ func main() {
 			}()
 		}
 	})
-	c.Start()
+
+	// Weekly email digest: Mondays at 8am UTC
+	cr.AddFunc("0 8 * * 1", func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+		defer cancel()
+		digestSender.SendWeeklyDigests(ctx)
+	})
+
+	cr.Start()
 
 	port := os.Getenv("PORT")
 	if port == "" {
@@ -117,6 +139,6 @@ func main() {
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	srv.Shutdown(ctx)
-	c.Stop()
+	cr.Stop()
 	log.Println("server shut down")
 }
