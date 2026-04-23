@@ -48,7 +48,7 @@ export function PublicProfile() {
 
   return (
     <div className="min-h-screen bg-gray-950">
-      <Navbar />
+      <Navbar user={me} />
       <div className="max-w-4xl mx-auto px-4 py-8">
         {/* Profile header */}
         <div className="flex items-center gap-6 mb-8">

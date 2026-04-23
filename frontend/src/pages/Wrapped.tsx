@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
+import { toPng } from 'html-to-image'
 import api from '../lib/api'
 import { useMe } from '../lib/hooks'
 import { isAuthenticated } from '../lib/auth'
@@ -57,9 +58,39 @@ interface WrappedCardProps {
 }
 
 function WrappedCard({ data, isOwn }: WrappedCardProps) {
+  const [copied, setCopied] = useState(false)
+  const [downloading, setDownloading] = useState(false)
+
   const shareURL = `${window.location.origin}/u/${data.login}/wrapped?year=${data.year}`
-  const shareText = `My ${data.year} in open source: ${data.total_prs} PRs merged across ${data.unique_repos} repos, ${data.longest_streak}-day streak, Impact Score ${data.impact_score}. Check it out on @GitPulse 🚀`
+  const shareText = `My ${data.year} in open source:\n⚡ ${data.total_prs} PRs merged · ${data.unique_repos} repos · ${data.longest_streak}-day streak\n🏆 Impact Score: ${data.impact_score}\n\nSee yours → ${shareURL}`
+  const xText = `My ${data.year} in open source: ${data.total_prs} PRs merged across ${data.unique_repos} repos, ${data.longest_streak}-day streak, Impact Score ${data.impact_score} 🚀`
   const maxCount = Math.max(...(data.monthly_activity?.map((m) => m.count) ?? [1]))
+
+  async function handleDownload() {
+    setDownloading(true)
+    try {
+      const node = document.getElementById('wrapped-card')
+      if (!node) return
+      const dataUrl = await toPng(node, { pixelRatio: 2, backgroundColor: '#030712' })
+      const a = document.createElement('a')
+      a.download = `gitpulse-wrapped-${data.login}-${data.year}.png`
+      a.href = dataUrl
+      a.click()
+    } finally {
+      setDownloading(false)
+    }
+  }
+
+  function handleLinkedIn() {
+    navigator.clipboard.writeText(shareText)
+    window.open(`https://www.linkedin.com/feed/?shareActive=true`, '_blank')
+  }
+
+  function handleCopy() {
+    navigator.clipboard.writeText(shareURL)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
 
   return (
     <div id="wrapped-card" className="bg-gradient-to-br from-gray-900 via-purple-950/20 to-gray-900 border border-purple-500/30 rounded-2xl p-8 max-w-2xl mx-auto">
@@ -161,29 +192,48 @@ function WrappedCard({ data, isOwn }: WrappedCardProps) {
 
       {/* Share */}
       {isOwn && (
-        <div className="flex gap-3">
-          <a
-            href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareURL)}`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex-1 bg-black border border-gray-600 hover:border-gray-400 text-white text-sm font-medium py-2.5 rounded-lg transition-colors text-center"
-          >
-            Share on X
-          </a>
-          <a
-            href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(shareURL)}`}
-            target="_blank"
-            rel="noreferrer"
-            className="flex-1 bg-blue-700 hover:bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors text-center"
-          >
-            Share on LinkedIn
-          </a>
+        <div className="space-y-3">
+          {/* Download row */}
           <button
-            onClick={() => navigator.clipboard.writeText(shareURL)}
-            className="px-4 bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white text-sm rounded-lg transition-colors"
+            onClick={handleDownload}
+            disabled={downloading}
+            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-500 hover:to-blue-500 disabled:opacity-50 text-white text-sm font-semibold py-3 rounded-xl transition-all flex items-center justify-center gap-2"
           >
-            Copy link
+            {downloading ? (
+              <>
+                <span className="animate-spin">⏳</span> Generating image…
+              </>
+            ) : (
+              <>↓ Download Image</>
+            )}
           </button>
+
+          {/* Social + copy row */}
+          <div className="flex gap-2">
+            <a
+              href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(xText)}&url=${encodeURIComponent(shareURL)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="flex-1 bg-black border border-gray-600 hover:border-gray-400 text-white text-sm font-medium py-2.5 rounded-lg transition-colors text-center"
+            >
+              Share on X
+            </a>
+            <button
+              onClick={handleLinkedIn}
+              className="flex-1 bg-blue-700 hover:bg-blue-600 text-white text-sm font-medium py-2.5 rounded-lg transition-colors relative group"
+            >
+              Share on LinkedIn
+              <span className="absolute -top-8 left-1/2 -translate-x-1/2 bg-gray-800 text-xs text-gray-200 px-2 py-1 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
+                Post text copied to clipboard
+              </span>
+            </button>
+            <button
+              onClick={handleCopy}
+              className="px-4 bg-gray-800 hover:bg-gray-700 border border-gray-600 text-white text-sm rounded-lg transition-colors min-w-[80px]"
+            >
+              {copied ? '✓ Copied' : 'Copy link'}
+            </button>
+          </div>
         </div>
       )}
 
