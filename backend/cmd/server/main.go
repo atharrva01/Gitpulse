@@ -92,6 +92,17 @@ func main() {
 	r.GET("/badge/:login", pubH.Badge)
 	r.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
 
+	// Serve React SPA — must come after all API/auth routes
+	frontendDist := os.Getenv("FRONTEND_DIST")
+	if frontendDist == "" {
+		frontendDist = "./frontend/dist"
+	}
+	r.Static("/assets", frontendDist+"/assets")
+	r.StaticFile("/favicon.ico", frontendDist+"/favicon.ico")
+	r.NoRoute(func(c *gin.Context) {
+		c.File(frontendDist + "/index.html")
+	})
+
 	cr := cron.New()
 
 	// Daily user sync at 3am — semaphore limits concurrent syncs to 5
