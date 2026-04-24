@@ -95,6 +95,7 @@ func main() {
 	}
 
 	// Public
+	r.GET("/leaderboard", pubH.Leaderboard)
 	r.GET("/u/:login", pubH.Profile)
 	r.GET("/u/:login/wrapped", wrappedH.GetPublic)
 	r.GET("/badge/:login", pubH.Badge)

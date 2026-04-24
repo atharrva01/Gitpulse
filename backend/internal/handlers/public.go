@@ -16,6 +16,15 @@ func NewPublicHandler(store *db.Store) *PublicHandler {
 	return &PublicHandler{store: store}
 }
 
+func (h *PublicHandler) Leaderboard(c *gin.Context) {
+	entries, err := h.store.GetLeaderboard(c.Request.Context(), 50)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, entries)
+}
+
 func (h *PublicHandler) Profile(c *gin.Context) {
 	login := c.Param("login")
 	user, err := h.store.GetUserByLogin(c.Request.Context(), login)

@@ -22,6 +22,7 @@ export function Navbar({ user }: NavbarProps) {
     { to: '/repos', label: 'Repos' },
     { to: '/wrapped', label: 'Wrapped' },
     { to: '/maintainer', label: 'Maintainer' },
+    { to: '/leaderboard', label: 'Leaderboard' },
   ]
 
   return (

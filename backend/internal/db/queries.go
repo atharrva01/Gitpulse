@@ -361,6 +361,33 @@ func (s *Store) GetPRsLastWeek(ctx context.Context, userID int64) ([]models.Pull
 	return prs, err
 }
 
+type LeaderboardEntry struct {
+	Login         string `db:"login"          json:"login"`
+	Name          string `db:"name"           json:"name"`
+	AvatarURL     string `db:"avatar_url"     json:"avatar_url"`
+	ImpactScore   int    `db:"impact_score"   json:"impact_score"`
+	CurrentStreak int    `db:"current_streak" json:"current_streak"`
+	LongestStreak int    `db:"longest_streak" json:"longest_streak"`
+	TotalPRs      int    `db:"total_prs"      json:"total_prs"`
+}
+
+func (s *Store) GetLeaderboard(ctx context.Context, limit int) ([]LeaderboardEntry, error) {
+	var entries []LeaderboardEntry
+	err := s.db.SelectContext(ctx, &entries, `
+		SELECT u.login, u.name, u.avatar_url, u.impact_score, u.current_streak, u.longest_streak,
+		       COALESCE(p.total_prs, 0) AS total_prs
+		FROM users u
+		LEFT JOIN (
+			SELECT user_id, COUNT(*) AS total_prs
+			FROM pull_requests WHERE state = 'merged'
+			GROUP BY user_id
+		) p ON p.user_id = u.id
+		WHERE u.is_public = true
+		ORDER BY u.impact_score DESC
+		LIMIT $1`, limit)
+	return entries, err
+}
+
 func (s *Store) ListAllUsers(ctx context.Context) ([]models.User, error) {
 	var users []models.User
 	err := s.db.SelectContext(ctx, &users, `

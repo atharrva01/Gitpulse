@@ -9,6 +9,7 @@ import { PublicProfile } from './pages/PublicProfile'
 import { Settings } from './pages/Settings'
 import { Wrapped, PublicWrapped } from './pages/Wrapped'
 import { Maintainer } from './pages/Maintainer'
+import { Leaderboard } from './pages/Leaderboard'
 import { AppCanvas } from './components/AppCanvas'
 
 const qc = new QueryClient({
@@ -61,6 +62,7 @@ export default function App() {
             element={<ProtectedRoute><Maintainer /></ProtectedRoute>}
           />
           <Route path="/u/:login/wrapped" element={<PublicWrapped />} />
+          <Route path="/leaderboard" element={<Leaderboard />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
