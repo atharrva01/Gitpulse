@@ -361,6 +361,15 @@ func (s *Store) GetPRsLastWeek(ctx context.Context, userID int64) ([]models.Pull
 	return prs, err
 }
 
+func (s *Store) ListAllUsers(ctx context.Context) ([]models.User, error) {
+	var users []models.User
+	err := s.db.SelectContext(ctx, &users, `
+		SELECT id, login, name, avatar_url, email, impact_score, current_streak,
+		       longest_streak, is_public, email_digest_opt, last_synced_at, created_at
+		FROM users ORDER BY created_at DESC`)
+	return users, err
+}
+
 func percentile(sorted []float64, p float64) float64 {
 	if len(sorted) == 0 {
 		return 0

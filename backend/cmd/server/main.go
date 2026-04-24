@@ -43,6 +43,7 @@ func main() {
 	pubH := handlers.NewPublicHandler(store)
 	wrappedH := handlers.NewWrappedHandler(store)
 	maintH := handlers.NewMaintainerHandler(store, maintWorker)
+	adminH := handlers.NewAdminHandler(store)
 
 	r := gin.Default()
 
@@ -84,6 +85,13 @@ func main() {
 		api.DELETE("/maintainer/repos/:repo", maintH.RemoveWatched)
 		api.GET("/maintainer/repos/:id/dashboard", maintH.GetDashboard)
 		api.POST("/maintainer/repos/:id/refresh", maintH.RefreshRepo)
+	}
+
+	// Admin
+	admin := r.Group("/admin")
+	admin.Use(handlers.AdminMiddleware())
+	{
+		admin.GET("/users", adminH.ListUsers)
 	}
 
 	// Public
