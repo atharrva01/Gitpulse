@@ -46,7 +46,7 @@ func (h *WrappedHandler) GetPublic(c *gin.Context) {
 		return
 	}
 	if !user.IsPublic {
-		c.JSON(http.StatusForbidden, gin.H{"error": "profile is private"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
 		return
 	}
 	ws, err := h.store.GetWrappedStats(c.Request.Context(), user.ID, year)

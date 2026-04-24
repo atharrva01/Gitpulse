@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gitpulse/backend/internal/db"
@@ -37,6 +38,12 @@ func (h *MaintainerHandler) AddWatched(c *gin.Context) {
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "repo is required"})
+		return
+	}
+
+	parts := strings.SplitN(body.Repo, "/", 2)
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" || len(body.Repo) > 255 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "repo must be in owner/repo format"})
 		return
 	}
 

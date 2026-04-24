@@ -114,6 +114,11 @@ func main() {
 
 	cr := cron.New()
 
+	// Purge expired OAuth states every 15 minutes
+	cr.AddFunc("*/15 * * * *", func() {
+		handlers.PurgeExpiredOAuthStates()
+	})
+
 	// Daily user sync at 3am — semaphore limits concurrent syncs to 5
 	cr.AddFunc("0 3 * * *", func() {
 		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Hour)

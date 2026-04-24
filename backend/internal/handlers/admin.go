@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"crypto/subtle"
 	"net/http"
 	"os"
 
@@ -19,7 +20,7 @@ func NewAdminHandler(store *db.Store) *AdminHandler {
 func AdminMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		secret := os.Getenv("ADMIN_SECRET")
-		if secret == "" || c.GetHeader("X-Admin-Secret") != secret {
+		if secret == "" || subtle.ConstantTimeCompare([]byte(c.GetHeader("X-Admin-Secret")), []byte(secret)) != 1 {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "unauthorized"})
 			return
 		}

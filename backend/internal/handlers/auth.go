@@ -18,7 +18,7 @@ import (
 )
 
 var (
-	oauthStates   sync.Map // state → true
+	oauthStates   sync.Map // state → time.Time (created at)
 	pendingTokens sync.Map // one-time code → jwt string
 )
 
@@ -38,14 +38,19 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		return
 	}
 	cfg := auth.OAuthConfig()
-	oauthStates.Store(state, true)
+	oauthStates.Store(state, time.Now())
 	c.Redirect(http.StatusTemporaryRedirect, auth.AuthURL(cfg, state))
 }
 
 func (h *AuthHandler) Callback(c *gin.Context) {
 	state := c.Query("state")
-	if _, ok := oauthStates.LoadAndDelete(state); !ok {
+	val, ok := oauthStates.LoadAndDelete(state)
+	if !ok {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid oauth state"})
+		return
+	}
+	if time.Since(val.(time.Time)) > 10*time.Minute {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "oauth state expired"})
 		return
 	}
 
@@ -134,6 +139,15 @@ func (h *AuthHandler) Me(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, user)
+}
+
+func PurgeExpiredOAuthStates() {
+	oauthStates.Range(func(k, v any) bool {
+		if time.Since(v.(time.Time)) > 10*time.Minute {
+			oauthStates.Delete(k)
+		}
+		return true
+	})
 }
 
 func randomState() (string, error) {

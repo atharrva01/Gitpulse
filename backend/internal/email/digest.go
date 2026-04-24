@@ -57,7 +57,11 @@ func (d *DigestSender) SendWeeklyDigests(ctx context.Context) {
 			continue
 		}
 
-		prs, _ := d.store.GetPRsLastWeek(ctx, u.ID)
+		prs, err := d.store.GetPRsLastWeek(ctx, u.ID)
+		if err != nil {
+			log.Printf("email digest: get prs for %s: %v", u.Login, err)
+			continue
+		}
 
 		subject := fmt.Sprintf("Your GitPulse weekly — %s", time.Now().Format("Jan 2"))
 		html := d.buildHTML(u.Login, u.Name, u.ImpactScore, u.CurrentStreak, prs)
