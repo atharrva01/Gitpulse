@@ -34,7 +34,7 @@ export function useReviewLatency() {
 export function usePublicProfile(login: string) {
   return useQuery<DashboardStats>({
     queryKey: ['profile', login],
-    queryFn: () => api.get(`/u/${login}`, { baseURL: '' }).then((r) => r.data),
+    queryFn: () => api.get(`/u/${login}`).then((r) => r.data),
     enabled: !!login,
   })
 }

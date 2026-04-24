@@ -94,10 +94,15 @@ func main() {
 		admin.GET("/users", adminH.ListUsers)
 	}
 
-	// Public
-	r.GET("/leaderboard", pubH.Leaderboard)
-	r.GET("/u/:login", pubH.Profile)
-	r.GET("/u/:login/wrapped", wrappedH.GetPublic)
+	// Public API — under /api so refresh doesn't conflict with React Router SPA routes
+	pub := r.Group("/api")
+	{
+		pub.GET("/leaderboard", pubH.Leaderboard)
+		pub.GET("/u/:login", pubH.Profile)
+		pub.GET("/u/:login/wrapped", wrappedH.GetPublic)
+	}
+
+	// Root-level public — badge is embedded in READMEs so must stay at root
 	r.GET("/badge/:login", pubH.Badge)
 	r.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
 

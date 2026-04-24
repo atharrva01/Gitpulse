@@ -376,7 +376,7 @@ export function PublicWrapped() {
 
   const { data, isLoading, error } = useQuery<WrappedStats>({
     queryKey: ['wrapped-public', login, year],
-    queryFn: () => api.get(`/u/${login}/wrapped?year=${year}`, { baseURL: '' }).then((r) => r.data),
+    queryFn: () => api.get(`/u/${login}/wrapped?year=${year}`).then((r) => r.data),
     enabled: !!login,
   })
 

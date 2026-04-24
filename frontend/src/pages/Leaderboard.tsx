@@ -27,7 +27,7 @@ export function Leaderboard() {
 
   const { data, isLoading } = useQuery<LeaderboardEntry[]>({
     queryKey: ['leaderboard'],
-    queryFn: () => api.get('/leaderboard', { baseURL: '' }).then((r) => r.data),
+    queryFn: () => api.get('/leaderboard').then((r) => r.data),
     staleTime: 60_000,
   })
 
