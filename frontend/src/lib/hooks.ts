@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from './api'
+import { isAuthenticated } from './auth'
 import type { DashboardStats, HeatmapDay, MonthlyCount, PlatformStats, RepoStats, ReviewLatency, User } from './api'
 
 export function useMe() {
@@ -7,6 +8,7 @@ export function useMe() {
     queryKey: ['me'],
     queryFn: () => api.get('/me').then((r) => r.data),
     retry: false,
+    enabled: isAuthenticated(),
   })
 }
 
@@ -50,6 +52,8 @@ export function useSync(full = false) {
         qc.invalidateQueries({ queryKey: ['repos'] })
         qc.invalidateQueries({ queryKey: ['review-latency'] })
         qc.invalidateQueries({ queryKey: ['me'] })
+        qc.invalidateQueries({ queryKey: ['heatmap'] })
+        qc.invalidateQueries({ queryKey: ['velocity'] })
       }, delay)
     },
   })
