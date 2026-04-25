@@ -6,6 +6,7 @@ import { Navbar } from '../components/Navbar'
 import { BadgeCard } from '../components/BadgeCard'
 import { ContributionHeatmap } from '../components/ContributionHeatmap'
 import { VelocityChart } from '../components/VelocityChart'
+import { WelcomeGuide } from '../components/WelcomeGuide'
 import { Link } from 'react-router-dom'
 
 function fmtLines(n: number): string {
@@ -53,6 +54,7 @@ export function Dashboard() {
 
   return (
     <div className="min-h-screen">
+      <WelcomeGuide user={me} />
       <Navbar user={d.user} />
 
       <div className="w-full px-4 sm:px-6 lg:px-10 py-8 sm:py-10 max-w-screen-2xl mx-auto">
