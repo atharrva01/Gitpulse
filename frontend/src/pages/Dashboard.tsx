@@ -1,9 +1,10 @@
-import { useDashboard, useSync, useMe } from '../lib/hooks'
+import { useDashboard, useSync, useMe, useHeatmap } from '../lib/hooks'
 import { StatCard } from '../components/StatCard'
 import { PRList } from '../components/PRList'
 import { ImpactScore } from '../components/ImpactScore'
 import { Navbar } from '../components/Navbar'
 import { BadgeCard } from '../components/BadgeCard'
+import { ContributionHeatmap } from '../components/ContributionHeatmap'
 import { Link } from 'react-router-dom'
 
 function fmtLines(n: number): string {
@@ -20,6 +21,7 @@ function fmtDate(d: string | null): string {
 export function Dashboard() {
   const { data: me } = useMe()
   const { data, isLoading, error } = useDashboard()
+  const { data: heatmapDays } = useHeatmap()
   const sync = useSync()
   const fullSync = useSync(true)
 
@@ -114,6 +116,13 @@ export function Dashboard() {
           <StatCard label="Repositories" value={d.unique_repos} icon="📦" />
           <StatCard label="Current Streak" value={`${d.current_streak}d`} sub={`Longest: ${d.longest_streak}d`} accent icon="🔥" />
         </div>
+
+        {/* Contribution heatmap */}
+        {heatmapDays && heatmapDays.length > 0 && (
+          <div className="mb-6">
+            <ContributionHeatmap days={heatmapDays} />
+          </div>
+        )}
 
         {/* Bottom grid */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">

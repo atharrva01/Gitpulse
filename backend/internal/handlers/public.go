@@ -44,6 +44,21 @@ func (h *PublicHandler) Profile(c *gin.Context) {
 	c.JSON(http.StatusOK, stats)
 }
 
+func (h *PublicHandler) PublicHeatmap(c *gin.Context) {
+	login := c.Param("login")
+	user, err := h.store.GetUserByLogin(c.Request.Context(), login)
+	if err != nil || !user.IsPublic {
+		c.JSON(http.StatusNotFound, gin.H{"error": "user not found"})
+		return
+	}
+	days, err := h.store.GetHeatmapDays(c.Request.Context(), user.ID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, days)
+}
+
 func badgeTierLabel(score int) string {
 	switch {
 	case score >= 950:

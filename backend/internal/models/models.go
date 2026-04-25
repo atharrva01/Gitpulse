@@ -140,6 +140,13 @@ type MonthlyCount struct {
 	Count int    `json:"count"`
 }
 
+type HeatmapDay struct {
+	Day       time.Time `db:"day" json:"day"`
+	HasPR     bool      `db:"has_pr" json:"has_pr"`
+	HasReview bool      `db:"has_review" json:"has_review"`
+	HasCommit bool      `db:"has_commit" json:"has_commit"`
+}
+
 type DashboardStats struct {
 	User             *User        `json:"user"`
 	TotalMergedPRs   int          `json:"total_merged_prs"`

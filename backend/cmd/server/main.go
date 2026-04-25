@@ -78,6 +78,7 @@ func main() {
 		api.POST("/sync", dashH.Sync)
 		api.PATCH("/settings", dashH.UpdateSettings)
 
+		api.GET("/heatmap", dashH.Heatmap)
 		api.GET("/wrapped", wrappedH.Get)
 
 		api.GET("/maintainer/repos", maintH.ListWatched)
@@ -99,6 +100,7 @@ func main() {
 	{
 		pub.GET("/leaderboard", pubH.Leaderboard)
 		pub.GET("/u/:login", pubH.Profile)
+		pub.GET("/u/:login/heatmap", pubH.PublicHeatmap)
 		pub.GET("/u/:login/wrapped", wrappedH.GetPublic)
 	}
 

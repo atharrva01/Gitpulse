@@ -73,6 +73,13 @@ export interface DashboardStats {
   sync_status: string
 }
 
+export interface HeatmapDay {
+  day: string
+  has_pr: boolean
+  has_review: boolean
+  has_commit: boolean
+}
+
 export interface ReviewLatency {
   median: number
   p75: number

@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from './api'
-import type { DashboardStats, RepoStats, ReviewLatency, User } from './api'
+import type { DashboardStats, HeatmapDay, RepoStats, ReviewLatency, User } from './api'
 
 export function useMe() {
   return useQuery<User>({
@@ -52,6 +52,21 @@ export function useSync(full = false) {
         qc.invalidateQueries({ queryKey: ['me'] })
       }, delay)
     },
+  })
+}
+
+export function useHeatmap() {
+  return useQuery<HeatmapDay[]>({
+    queryKey: ['heatmap'],
+    queryFn: () => api.get('/heatmap').then((r) => r.data),
+  })
+}
+
+export function usePublicHeatmap(login: string) {
+  return useQuery<HeatmapDay[]>({
+    queryKey: ['heatmap', login],
+    queryFn: () => api.get(`/u/${login}/heatmap`).then((r) => r.data),
+    enabled: !!login,
   })
 }
 

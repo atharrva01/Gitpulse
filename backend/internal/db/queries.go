@@ -219,6 +219,16 @@ func (s *Store) GetReviewLatency(ctx context.Context, userID int64) (map[string]
 	}, nil
 }
 
+func (s *Store) GetHeatmapDays(ctx context.Context, userID int64) ([]models.HeatmapDay, error) {
+	var days []models.HeatmapDay
+	err := s.db.SelectContext(ctx, &days, `
+		SELECT day, has_pr, has_review, has_commit
+		FROM streak_days
+		WHERE user_id = $1 AND day >= NOW() - INTERVAL '54 weeks'
+		ORDER BY day ASC`, userID)
+	return days, err
+}
+
 func (s *Store) GetAllStreakDays(ctx context.Context, userID int64) ([]models.StreakDay, error) {
 	var days []models.StreakDay
 	// Only days with a commit or merged PR count toward streak — reviews excluded
