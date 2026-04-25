@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import api from './api'
-import type { DashboardStats, HeatmapDay, RepoStats, ReviewLatency, User } from './api'
+import type { DashboardStats, HeatmapDay, MonthlyCount, PlatformStats, RepoStats, ReviewLatency, User } from './api'
 
 export function useMe() {
   return useQuery<User>({
@@ -59,6 +59,30 @@ export function useHeatmap() {
   return useQuery<HeatmapDay[]>({
     queryKey: ['heatmap'],
     queryFn: () => api.get('/heatmap').then((r) => r.data),
+  })
+}
+
+export function useVelocity() {
+  return useQuery<MonthlyCount[]>({
+    queryKey: ['velocity'],
+    queryFn: () => api.get('/velocity').then((r) => r.data),
+  })
+}
+
+export function usePublicVelocity(login: string) {
+  return useQuery<MonthlyCount[]>({
+    queryKey: ['velocity', login],
+    queryFn: () => api.get(`/u/${login}/velocity`).then((r) => r.data),
+    enabled: !!login,
+  })
+}
+
+export function usePlatformStats() {
+  return useQuery<PlatformStats>({
+    queryKey: ['platform-stats'],
+    queryFn: () => api.get('/stats').then((r) => r.data),
+    staleTime: 60 * 60 * 1000,
+    retry: false,
   })
 }
 

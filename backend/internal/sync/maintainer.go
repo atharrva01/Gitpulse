@@ -20,12 +20,16 @@ func NewMaintainerWorker(store *db.Store) *MaintainerWorker {
 }
 
 func (w *MaintainerWorker) SyncRepo(ctx context.Context, user *models.User, wr *models.WatchedRepo) error {
+	return w.SyncRepoWithToken(ctx, user.GitHubToken, wr)
+}
+
+func (w *MaintainerWorker) SyncRepoWithToken(ctx context.Context, token string, wr *models.WatchedRepo) error {
 	parts := strings.SplitN(wr.RepoFullName, "/", 2)
 	if len(parts) != 2 {
 		return nil
 	}
 	owner, name := parts[0], parts[1]
-	client := ghclient.New(user.GitHubToken)
+	client := ghclient.New(token)
 
 	if err := w.syncOpenPRs(ctx, client, wr, owner, name); err != nil {
 		log.Printf("sync open PRs for %s: %v", wr.RepoFullName, err)

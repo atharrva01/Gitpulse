@@ -371,6 +371,40 @@ func (s *Store) GetPRsLastWeek(ctx context.Context, userID int64) ([]models.Pull
 	return prs, err
 }
 
+type PlatformStats struct {
+	TotalUsers    int `db:"total_users"    json:"total_users"`
+	TotalPRs      int `db:"total_prs"      json:"total_prs"`
+	HighestStreak int `db:"highest_streak" json:"highest_streak"`
+}
+
+func (s *Store) GetMonthlyVelocity(ctx context.Context, userID int64) ([]models.MonthlyCount, error) {
+	var rows []models.MonthlyCount
+	err := s.db.SelectContext(ctx, &rows, `
+		WITH months AS (
+			SELECT DATE_TRUNC('month', NOW() - (i || ' months')::INTERVAL) AS month
+			FROM generate_series(0, 12) AS gs(i)
+		)
+		SELECT TO_CHAR(m.month, 'Mon ''YY') AS month,
+		       COALESCE(COUNT(p.id), 0)     AS count
+		FROM months m
+		LEFT JOIN pull_requests p
+			ON DATE_TRUNC('month', p.merged_at) = m.month
+			AND p.user_id = $1 AND p.state = 'merged'
+		GROUP BY m.month
+		ORDER BY m.month ASC`, userID)
+	return rows, err
+}
+
+func (s *Store) GetPlatformStats(ctx context.Context) (*PlatformStats, error) {
+	var stats PlatformStats
+	err := s.db.GetContext(ctx, &stats, `
+		SELECT
+			(SELECT COUNT(*) FROM users)                              AS total_users,
+			(SELECT COUNT(*) FROM pull_requests WHERE state='merged') AS total_prs,
+			(SELECT COALESCE(MAX(longest_streak),0) FROM users)       AS highest_streak`)
+	return &stats, err
+}
+
 type LeaderboardEntry struct {
 	Login         string `db:"login"          json:"login"`
 	Name          string `db:"name"           json:"name"`

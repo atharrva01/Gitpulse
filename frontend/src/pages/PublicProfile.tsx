@@ -1,10 +1,11 @@
 import { useParams } from 'react-router-dom'
-import { usePublicProfile, usePublicHeatmap, useMe } from '../lib/hooks'
+import { usePublicProfile, usePublicHeatmap, usePublicVelocity, useMe } from '../lib/hooks'
 import { StatCard } from '../components/StatCard'
 import { PRList } from '../components/PRList'
 import { ImpactScore } from '../components/ImpactScore'
 import { BadgeCard } from '../components/BadgeCard'
 import { ContributionHeatmap } from '../components/ContributionHeatmap'
+import { VelocityChart } from '../components/VelocityChart'
 import { Navbar } from '../components/Navbar'
 import { isAuthenticated } from '../lib/auth'
 
@@ -19,6 +20,7 @@ export function PublicProfile() {
   const { data: me } = useMe()
   const { data, isLoading, error } = usePublicProfile(login || '')
   const { data: heatmapDays } = usePublicHeatmap(login || '')
+  const { data: velocityMonths } = usePublicVelocity(login || '')
 
   const badgeURL = `/badge/${login}`
   const profileURL = window.location.href
@@ -110,12 +112,19 @@ export function PublicProfile() {
           <StatCard label="Streak" value={`${d.current_streak}d`} sub={`Longest: ${d.longest_streak}d`} accent icon="🔥" />
         </div>
 
-        {/* Contribution heatmap */}
-        {heatmapDays && heatmapDays.length > 0 && (
-          <div className="mb-6">
-            <ContributionHeatmap days={heatmapDays} />
+        {/* Heatmap + velocity */}
+        {(heatmapDays?.length || velocityMonths?.length) ? (
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
+            {heatmapDays && heatmapDays.length > 0 && (
+              <div className="xl:col-span-2">
+                <ContributionHeatmap days={heatmapDays} />
+              </div>
+            )}
+            {velocityMonths && velocityMonths.length > 0 && (
+              <VelocityChart months={velocityMonths} />
+            )}
           </div>
-        )}
+        ) : null}
 
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
           {/* Recent PRs */}

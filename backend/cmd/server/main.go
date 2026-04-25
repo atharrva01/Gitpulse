@@ -79,6 +79,7 @@ func main() {
 		api.PATCH("/settings", dashH.UpdateSettings)
 
 		api.GET("/heatmap", dashH.Heatmap)
+		api.GET("/velocity", dashH.Velocity)
 		api.GET("/wrapped", wrappedH.Get)
 
 		api.GET("/maintainer/repos", maintH.ListWatched)
@@ -99,13 +100,16 @@ func main() {
 	pub := r.Group("/api")
 	{
 		pub.GET("/leaderboard", pubH.Leaderboard)
+		pub.GET("/stats", pubH.PlatformStats)
 		pub.GET("/u/:login", pubH.Profile)
 		pub.GET("/u/:login/heatmap", pubH.PublicHeatmap)
+		pub.GET("/u/:login/velocity", pubH.PublicVelocity)
 		pub.GET("/u/:login/wrapped", wrappedH.GetPublic)
 	}
 
-	// Root-level public — badge is embedded in READMEs so must stay at root
+	// Root-level public — badge + unsubscribe must stay at root
 	r.GET("/badge/:login", pubH.Badge)
+	r.GET("/unsubscribe", pubH.Unsubscribe)
 	r.GET("/health", func(c *gin.Context) { c.JSON(http.StatusOK, gin.H{"status": "ok"}) })
 
 	// Serve React SPA — must come after all API/auth routes
@@ -151,6 +155,25 @@ func main() {
 			}()
 		}
 		wg.Wait()
+	})
+
+	// Maintainer watched-repo refresh every 6 hours
+	cr.AddFunc("0 */6 * * *", func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 30*time.Minute)
+		defer cancel()
+		repos, err := store.GetAllWatchedReposForCron(ctx)
+		if err != nil {
+			log.Printf("cron maintainer: get repos: %v", err)
+			return
+		}
+		log.Printf("cron maintainer: refreshing %d watched repos", len(repos))
+		for i := range repos {
+			r := repos[i]
+			wr := r.WatchedRepo
+			if err := maintWorker.SyncRepoWithToken(ctx, r.GitHubToken, &wr); err != nil {
+				log.Printf("cron maintainer: sync %s: %v", wr.RepoFullName, err)
+			}
+		}
 	})
 
 	// Weekly email digest: Mondays at 8am UTC

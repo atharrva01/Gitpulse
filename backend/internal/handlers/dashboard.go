@@ -66,6 +66,15 @@ func (h *DashboardHandler) Sync(c *gin.Context) {
 	c.JSON(http.StatusAccepted, gin.H{"message": "sync started", "full": !incremental})
 }
 
+func (h *DashboardHandler) Velocity(c *gin.Context) {
+	months, err := h.store.GetMonthlyVelocity(c.Request.Context(), userID(c))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, months)
+}
+
 func (h *DashboardHandler) Heatmap(c *gin.Context) {
 	days, err := h.store.GetHeatmapDays(c.Request.Context(), userID(c))
 	if err != nil {

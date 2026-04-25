@@ -80,6 +80,17 @@ export interface HeatmapDay {
   has_commit: boolean
 }
 
+export interface MonthlyCount {
+  month: string
+  count: number
+}
+
+export interface PlatformStats {
+  total_users: number
+  total_prs: number
+  highest_streak: number
+}
+
 export interface ReviewLatency {
   median: number
   p75: number

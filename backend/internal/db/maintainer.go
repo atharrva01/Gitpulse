@@ -7,6 +7,20 @@ import (
 	"github.com/gitpulse/backend/internal/models"
 )
 
+type WatchedRepoWithToken struct {
+	models.WatchedRepo
+	GitHubToken string `db:"github_token"`
+}
+
+func (s *Store) GetAllWatchedReposForCron(ctx context.Context) ([]WatchedRepoWithToken, error) {
+	var rows []WatchedRepoWithToken
+	err := s.db.SelectContext(ctx, &rows, `
+		SELECT wr.id, wr.user_id, wr.repo_full_name, wr.added_at, u.github_token
+		FROM watched_repos wr
+		JOIN users u ON u.id = wr.user_id`)
+	return rows, err
+}
+
 func (s *Store) GetWatchedRepos(ctx context.Context, userID int64) ([]models.WatchedRepo, error) {
 	var repos []models.WatchedRepo
 	err := s.db.SelectContext(ctx, &repos,

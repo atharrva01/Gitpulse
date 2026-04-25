@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
+	"strconv"
 	"time"
 )
 
@@ -25,36 +27,78 @@ func New(token string) *Client {
 }
 
 func (c *Client) query(ctx context.Context, query string, variables map[string]interface{}, out interface{}) error {
-	body := map[string]interface{}{"query": query, "variables": variables}
-	b, _ := json.Marshal(body)
-	req, _ := http.NewRequestWithContext(ctx, "POST", graphqlURL, bytes.NewReader(b))
-	req.Header.Set("Authorization", "Bearer "+c.token)
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "application/vnd.github+json")
+	const maxAttempts = 3
+	for attempt := 0; attempt < maxAttempts; attempt++ {
+		if attempt > 0 {
+			wait := time.Duration(1<<uint(attempt)) * time.Second
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(wait):
+			}
+		}
 
-	resp, err := c.http.Do(req)
-	if err != nil {
-		return err
-	}
-	defer resp.Body.Close()
-	data, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != http.StatusOK {
-		return fmt.Errorf("GitHub GraphQL returned %d: %s", resp.StatusCode, string(data))
-	}
+		body := map[string]interface{}{"query": query, "variables": variables}
+		b, _ := json.Marshal(body)
+		req, _ := http.NewRequestWithContext(ctx, "POST", graphqlURL, bytes.NewReader(b))
+		req.Header.Set("Authorization", "Bearer "+c.token)
+		req.Header.Set("Content-Type", "application/json")
+		req.Header.Set("Accept", "application/vnd.github+json")
 
-	var wrapper struct {
-		Data   json.RawMessage `json:"data"`
-		Errors []struct {
-			Message string `json:"message"`
-		} `json:"errors"`
+		resp, err := c.http.Do(req)
+		if err != nil {
+			return err
+		}
+
+		// Warn when rate limit is running low
+		if remaining := resp.Header.Get("X-RateLimit-Remaining"); remaining != "" {
+			if n, _ := strconv.Atoi(remaining); n < 100 {
+				log.Printf("github: rate limit low — %s points remaining", remaining)
+			}
+		}
+
+		// Primary rate limit (429) or secondary (403 with Retry-After)
+		if resp.StatusCode == http.StatusTooManyRequests ||
+			(resp.StatusCode == http.StatusForbidden && resp.Header.Get("Retry-After") != "") {
+			wait := 60 * time.Second
+			if secs, err := strconv.Atoi(resp.Header.Get("Retry-After")); err == nil && secs > 0 {
+				wait = time.Duration(secs) * time.Second
+			}
+			resp.Body.Close()
+			log.Printf("github: rate limited, waiting %s before retry", wait)
+			select {
+			case <-ctx.Done():
+				return ctx.Err()
+			case <-time.After(wait):
+			}
+			continue
+		}
+
+		data, _ := io.ReadAll(resp.Body)
+		resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			if attempt < maxAttempts-1 && resp.StatusCode >= 500 {
+				continue
+			}
+			return fmt.Errorf("GitHub GraphQL returned %d: %s", resp.StatusCode, string(data))
+		}
+
+		var wrapper struct {
+			Data   json.RawMessage `json:"data"`
+			Errors []struct {
+				Message string `json:"message"`
+			} `json:"errors"`
+		}
+		if err := json.Unmarshal(data, &wrapper); err != nil {
+			return err
+		}
+		if len(wrapper.Errors) > 0 {
+			return fmt.Errorf("graphql error: %s", wrapper.Errors[0].Message)
+		}
+		return json.Unmarshal(wrapper.Data, out)
 	}
-	if err := json.Unmarshal(data, &wrapper); err != nil {
-		return err
-	}
-	if len(wrapper.Errors) > 0 {
-		return fmt.Errorf("graphql error: %s", wrapper.Errors[0].Message)
-	}
-	return json.Unmarshal(wrapper.Data, out)
+	return fmt.Errorf("github: max retries exceeded")
 }
 
 type PRNode struct {

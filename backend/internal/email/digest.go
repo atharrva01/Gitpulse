@@ -11,6 +11,7 @@ import (
 	resend "github.com/resend/resend-go/v2"
 
 	"github.com/gitpulse/backend/internal/db"
+	"github.com/gitpulse/backend/internal/handlers"
 	"github.com/gitpulse/backend/internal/models"
 )
 
@@ -64,7 +65,8 @@ func (d *DigestSender) SendWeeklyDigests(ctx context.Context) {
 		}
 
 		subject := fmt.Sprintf("Your GitPulse weekly — %s", time.Now().Format("Jan 2"))
-		html := d.buildHTML(u.Login, u.Name, u.ImpactScore, u.CurrentStreak, prs)
+		unsubToken := handlers.UnsubscribeTokenFor(u.Login)
+		html := d.buildHTML(u.Login, u.Name, u.ImpactScore, u.CurrentStreak, prs, unsubToken)
 
 		params := &resend.SendEmailRequest{
 			From:    d.from,
@@ -78,7 +80,7 @@ func (d *DigestSender) SendWeeklyDigests(ctx context.Context) {
 	}
 }
 
-func (d *DigestSender) buildHTML(login, name string, score, streak int, prs []models.PullRequest) string {
+func (d *DigestSender) buildHTML(login, name string, score, streak int, prs []models.PullRequest, unsubToken string) string {
 	displayName := name
 	if displayName == "" {
 		displayName = login
@@ -146,10 +148,10 @@ func (d *DigestSender) buildHTML(login, name string, score, streak int, prs []mo
     </div>
 
     <p style="text-align:center;margin-top:24px;font-size:12px;color:#484f58">
-      <a href="%s/settings" style="color:#484f58">Unsubscribe</a> · GitPulse
+      <a href="%s/unsubscribe?login=%s&token=%s" style="color:#484f58">Unsubscribe</a> · GitPulse
     </p>
   </div>
 </body>
 </html>`,
-		displayName, score, streak, streakMsg, prRows, d.appURL, d.appURL)
+		displayName, score, streak, streakMsg, prRows, d.appURL, d.appURL, login, unsubToken)
 }

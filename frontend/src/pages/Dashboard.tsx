@@ -1,10 +1,11 @@
-import { useDashboard, useSync, useMe, useHeatmap } from '../lib/hooks'
+import { useDashboard, useSync, useMe, useHeatmap, useVelocity } from '../lib/hooks'
 import { StatCard } from '../components/StatCard'
 import { PRList } from '../components/PRList'
 import { ImpactScore } from '../components/ImpactScore'
 import { Navbar } from '../components/Navbar'
 import { BadgeCard } from '../components/BadgeCard'
 import { ContributionHeatmap } from '../components/ContributionHeatmap'
+import { VelocityChart } from '../components/VelocityChart'
 import { Link } from 'react-router-dom'
 
 function fmtLines(n: number): string {
@@ -22,6 +23,7 @@ export function Dashboard() {
   const { data: me } = useMe()
   const { data, isLoading, error } = useDashboard()
   const { data: heatmapDays } = useHeatmap()
+  const { data: velocityMonths } = useVelocity()
   const sync = useSync()
   const fullSync = useSync(true)
 
@@ -117,12 +119,19 @@ export function Dashboard() {
           <StatCard label="Current Streak" value={`${d.current_streak}d`} sub={`Longest: ${d.longest_streak}d`} accent icon="🔥" />
         </div>
 
-        {/* Contribution heatmap */}
-        {heatmapDays && heatmapDays.length > 0 && (
-          <div className="mb-6">
-            <ContributionHeatmap days={heatmapDays} />
+        {/* Contribution heatmap + velocity */}
+        {(heatmapDays?.length || velocityMonths?.length) ? (
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mb-6">
+            {heatmapDays && heatmapDays.length > 0 && (
+              <div className="xl:col-span-2">
+                <ContributionHeatmap days={heatmapDays} />
+              </div>
+            )}
+            {velocityMonths && velocityMonths.length > 0 && (
+              <VelocityChart months={velocityMonths} />
+            )}
           </div>
-        )}
+        ) : null}
 
         {/* Bottom grid */}
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">

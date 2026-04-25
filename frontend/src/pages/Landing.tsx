@@ -1,9 +1,17 @@
 import { isAuthenticated } from '../lib/auth'
 import { Navigate } from 'react-router-dom'
 import { HeroCanvas } from '../components/HeroCanvas'
+import { usePlatformStats } from '../lib/hooks'
+
+function fmt(n: number): string {
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`
+  if (n >= 1_000) return `${(n / 1_000).toFixed(1)}k`
+  return String(n)
+}
 
 export function Landing() {
   if (isAuthenticated()) return <Navigate to="/dashboard" replace />
+  const { data: platformStats } = usePlatformStats()
 
   return (
     <div className="min-h-screen bg-[#060a06] text-white overflow-x-hidden">
@@ -99,9 +107,9 @@ export function Landing() {
               </div>
               <div className="grid grid-cols-3 gap-2 pt-1">
                 {[
-                  { k: 'prs_merged', v: '312' },
-                  { k: 'streak', v: '47d 🔥' },
-                  { k: 'repos', v: '28' },
+                  { k: 'prs_tracked', v: platformStats ? fmt(platformStats.total_prs) : '—' },
+                  { k: 'top_streak', v: platformStats ? `${platformStats.highest_streak}d 🔥` : '—' },
+                  { k: 'contributors', v: platformStats ? String(platformStats.total_users) : '—' },
                 ].map((s) => (
                   <div key={s.k} className="bg-white/[0.03] rounded-xl p-3 border border-white/[0.04]">
                     <p className="text-[10px] text-white/25 mb-1.5 font-mono">{s.k}</p>
@@ -166,8 +174,8 @@ export function Landing() {
       <div className="border-y border-white/[0.04] py-10 px-6">
         <div className="max-w-4xl mx-auto grid grid-cols-2 sm:grid-cols-4 gap-6 text-center">
           {[
-            { n: '0 – 1000', l: 'Impact range' },
-            { n: '2019+', l: 'Historical sync' },
+            { n: platformStats ? fmt(platformStats.total_prs) : '—', l: 'PRs tracked' },
+            { n: platformStats ? String(platformStats.total_users) : '—', l: 'Contributors' },
             { n: 'Free', l: 'Forever' },
             { n: 'Open', l: 'Source' },
           ].map((s) => (
