@@ -28,7 +28,7 @@ func NewPublicHandler(store *db.Store) *PublicHandler {
 }
 
 func (h *PublicHandler) Leaderboard(c *gin.Context) {
-	entries, err := h.store.GetLeaderboard(c.Request.Context(), 50)
+	entries, err := h.store.GetLeaderboard(c.Request.Context())
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return

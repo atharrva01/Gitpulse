@@ -415,7 +415,7 @@ type LeaderboardEntry struct {
 	TotalPRs      int    `db:"total_prs"      json:"total_prs"`
 }
 
-func (s *Store) GetLeaderboard(ctx context.Context, limit int) ([]LeaderboardEntry, error) {
+func (s *Store) GetLeaderboard(ctx context.Context) ([]LeaderboardEntry, error) {
 	var entries []LeaderboardEntry
 	err := s.db.SelectContext(ctx, &entries, `
 		SELECT u.login, u.name, u.avatar_url, u.impact_score, u.current_streak, u.longest_streak,
@@ -427,8 +427,7 @@ func (s *Store) GetLeaderboard(ctx context.Context, limit int) ([]LeaderboardEnt
 			GROUP BY user_id
 		) p ON p.user_id = u.id
 		WHERE u.is_public = true
-		ORDER BY u.impact_score DESC
-		LIMIT $1`, limit)
+		ORDER BY u.impact_score DESC`)
 	return entries, err
 }
 
