@@ -54,6 +54,7 @@ export function useSync(full = false) {
         qc.invalidateQueries({ queryKey: ['me'] })
         qc.invalidateQueries({ queryKey: ['heatmap'] })
         qc.invalidateQueries({ queryKey: ['velocity'] })
+        qc.invalidateQueries({ queryKey: ['wrapped'] })
       }, delay)
     },
   })

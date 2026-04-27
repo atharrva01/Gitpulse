@@ -137,8 +137,8 @@ func (s *Store) GetDashboardStats(ctx context.Context, userID int64) (*models.Da
 	err = s.db.GetContext(ctx, &stats, `
 		SELECT
 			COUNT(*) AS total_merged_prs,
-			COALESCE(SUM(additions), 0) AS total_additions,
-			COALESCE(SUM(deletions), 0) AS total_deletions,
+			COALESCE(SUM(LEAST(additions, 10000)), 0) AS total_additions,
+			COALESCE(SUM(LEAST(deletions, 10000)), 0) AS total_deletions,
 			COUNT(DISTINCT repo_full_name) AS unique_repos
 		FROM pull_requests WHERE user_id = $1 AND state = 'merged'`, userID)
 	if err != nil {
@@ -280,8 +280,8 @@ func (s *Store) GetScoreAggregates(ctx context.Context, userID int64) (ScoreAggr
 	var agg ScoreAggregates
 	row := s.db.QueryRowContext(ctx, `
 		SELECT COUNT(*),
-		       COALESCE(SUM(additions),0),
-		       COALESCE(SUM(deletions),0),
+		       COALESCE(SUM(LEAST(additions, 10000)),0),
+		       COALESCE(SUM(LEAST(deletions, 10000)),0),
 		       COUNT(DISTINCT repo_full_name)
 		FROM pull_requests WHERE user_id=$1 AND state='merged'`, userID)
 	if err := row.Scan(&agg.TotalPRs, &agg.TotalAdditions, &agg.TotalDeletions, &agg.UniqueRepos); err != nil {
@@ -302,8 +302,8 @@ func (s *Store) RebuildRepoStats(ctx context.Context, userID int64) error {
 			repo_full_name,
 			COUNT(*) AS pr_count,
 			0 AS review_count,
-			COALESCE(SUM(additions), 0) AS total_additions,
-			COALESCE(SUM(deletions), 0) AS total_deletions,
+			COALESCE(SUM(LEAST(additions, 10000)), 0) AS total_additions,
+			COALESCE(SUM(LEAST(deletions, 10000)), 0) AS total_deletions,
 			MIN(merged_at) AS first_contrib,
 			MAX(merged_at) AS last_contrib,
 			NOW()
@@ -382,7 +382,7 @@ func (s *Store) GetMonthlyVelocity(ctx context.Context, userID int64) ([]models.
 	err := s.db.SelectContext(ctx, &rows, `
 		WITH months AS (
 			SELECT DATE_TRUNC('month', NOW() - (i || ' months')::INTERVAL) AS month
-			FROM generate_series(0, 12) AS gs(i)
+			FROM generate_series(0, 11) AS gs(i)
 		)
 		SELECT TO_CHAR(m.month, 'Mon ''YY') AS month,
 		       COALESCE(COUNT(p.id), 0)     AS count

@@ -131,7 +131,7 @@ func (c *Client) FetchMergedPRs(ctx context.Context, login, after string) (*PRsR
 	query ContributorPRs($login: String!, $after: String) {
 		user(login: $login) {
 			pullRequests(first: 100, after: $after, states: MERGED,
-					orderBy: {field: UPDATED_AT, direction: DESC}) {
+					orderBy: {field: CREATED_AT, direction: DESC}) {
 				nodes {
 					databaseId title number additions deletions url createdAt mergedAt
 					reviews(first: 1) { totalCount }
@@ -237,11 +237,11 @@ func (c *Client) FetchCommitDays(ctx context.Context, login string, from, to tim
 	return days, nil
 }
 
-func (c *Client) FetchReviews(ctx context.Context, login, after string) ([]ReviewNode, bool, string, error) {
+func (c *Client) FetchReviews(ctx context.Context, login, after string, from, to time.Time) ([]ReviewNode, bool, string, error) {
 	const q = `
-	query ContributorReviews($login: String!, $after: String) {
+	query ContributorReviews($login: String!, $after: String, $from: DateTime!, $to: DateTime!) {
 		user(login: $login) {
-			contributionsCollection {
+			contributionsCollection(from: $from, to: $to) {
 				pullRequestReviewContributions(first: 100, after: $after) {
 					nodes {
 						pullRequestReview {
@@ -258,7 +258,11 @@ func (c *Client) FetchReviews(ctx context.Context, login, after string) ([]Revie
 		}
 	}`
 
-	vars := map[string]interface{}{"login": login}
+	vars := map[string]interface{}{
+		"login": login,
+		"from":  from.UTC().Format(time.RFC3339),
+		"to":    to.UTC().Format(time.RFC3339),
+	}
 	if after != "" {
 		vars["after"] = after
 	}

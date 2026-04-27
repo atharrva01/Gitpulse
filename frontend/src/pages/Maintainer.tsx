@@ -89,7 +89,10 @@ function RepoDashboard({ id }: { id: number }) {
         ) : (
           <div className="space-y-2">
             {data.contributors.map((c) => {
-              const { label, cls } = staleBadge(c.is_stale ? 60 : 10)
+              const daysSince = c.last_pr_at
+                ? Math.floor((Date.now() - new Date(c.last_pr_at).getTime()) / 86400000)
+                : 9999
+              const { label, cls } = staleBadge(daysSince)
               return (
                 <div key={c.login} className="flex items-center gap-3 bg-white/[0.02] border border-white/[0.04] rounded-xl px-4 py-3">
                   <img src={c.avatar_url} alt={c.login} className="w-8 h-8 rounded-xl ring-1 ring-white/10 shrink-0" />

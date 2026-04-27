@@ -3,6 +3,7 @@ package email
 import (
 	"context"
 	"fmt"
+	"html"
 	"log"
 	"os"
 	"strings"
@@ -104,7 +105,7 @@ func (d *DigestSender) buildHTML(login, name string, score, streak int, prs []mo
           <a href="%s" style="color:#58a6ff;text-decoration:none;font-size:14px;font-weight:500">%s</a>
           <p style="margin:2px 0 0;color:#8b949e;font-size:12px;font-family:monospace">%s</p>
         </div>`,
-				pr.HTMLURL, pr.Title, pr.RepoFullName,
+				html.EscapeString(pr.HTMLURL), html.EscapeString(pr.Title), html.EscapeString(pr.RepoFullName),
 			))
 		}
 		prRows = sb.String()

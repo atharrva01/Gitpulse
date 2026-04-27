@@ -331,7 +331,7 @@ export function Wrapped() {
     queryFn: () => api.get(`/wrapped?year=${year}`).then((r) => r.data),
   })
 
-  const years = Array.from({ length: currentYear - 2019 }, (_, i) => currentYear - i)
+  const years = Array.from({ length: currentYear - 2018 }, (_, i) => currentYear - i)
 
   return (
     <div className="min-h-screen">

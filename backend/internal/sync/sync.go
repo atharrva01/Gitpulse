@@ -27,7 +27,7 @@ func (w *Worker) SyncUser(ctx context.Context, user *models.User, incremental bo
 		log.Printf("sync PRs for %s: %v", user.Login, err)
 		return err
 	}
-	if err := w.syncReviews(ctx, client, user); err != nil {
+	if err := w.syncReviews(ctx, client, user, incremental); err != nil {
 		log.Printf("sync reviews for %s: %v", user.Login, err)
 	}
 	if err := w.syncCommitDays(ctx, client, user, incremental); err != nil {
@@ -59,7 +59,7 @@ func (w *Worker) syncPRs(ctx context.Context, client *ghclient.Client, user *mod
 		}
 		done := false
 		for _, node := range res.PRs {
-			if incremental && node.MergedAt != nil && node.MergedAt.Before(cutoff) {
+			if incremental && node.CreatedAt.Before(cutoff) {
 				done = true
 				break
 			}
@@ -91,40 +91,63 @@ func (w *Worker) syncPRs(ctx context.Context, client *ghclient.Client, user *mod
 	return nil
 }
 
-func (w *Worker) syncReviews(ctx context.Context, client *ghclient.Client, user *models.User) error {
-	cursor := ""
-	for {
-		reviews, hasNext, next, err := client.FetchReviews(ctx, user.Login, cursor)
-		if err != nil {
-			return err
+func (w *Worker) syncReviews(ctx context.Context, client *ghclient.Client, user *models.User, incremental bool) error {
+	now := time.Now().UTC()
+
+	type window struct{ from, to time.Time }
+	var windows []window
+	if incremental {
+		windows = append(windows, window{now.AddDate(0, 0, -90), now})
+	} else {
+		startYear := 2019
+		if now.Year() < startYear {
+			startYear = now.Year()
 		}
-		for _, node := range reviews {
-			if node.DatabaseID == 0 {
-				continue
+		for y := startYear; y <= now.Year(); y++ {
+			from := time.Date(y, 1, 1, 0, 0, 0, 0, time.UTC)
+			to := time.Date(y, 12, 31, 23, 59, 59, 0, time.UTC)
+			if to.After(now) {
+				to = now
 			}
-			var timeToReview *int64
-			diff := int64(node.SubmittedAt.Sub(node.PullRequest.CreatedAt).Seconds())
-			if diff > 0 {
-				timeToReview = &diff
-			}
-			r := &models.Review{
-				UserID:         user.ID,
-				GitHubReviewID: node.DatabaseID,
-				RepoFullName:   node.PullRequest.Repository.NameWithOwner,
-				PRNumber:       node.PullRequest.Number,
-				PRTitle:        node.PullRequest.Title,
-				State:          node.State,
-				SubmittedAt:    node.SubmittedAt,
-				TimeToReview:   timeToReview,
-			}
-			if err := w.store.UpsertReview(ctx, r); err != nil {
-				log.Printf("upsert review %d: %v", node.DatabaseID, err)
-			}
+			windows = append(windows, window{from, to})
 		}
-		if !hasNext {
-			break
+	}
+
+	for _, win := range windows {
+		cursor := ""
+		for {
+			reviews, hasNext, next, err := client.FetchReviews(ctx, user.Login, cursor, win.from, win.to)
+			if err != nil {
+				return err
+			}
+			for _, node := range reviews {
+				if node.DatabaseID == 0 {
+					continue
+				}
+				var timeToReview *int64
+				diff := int64(node.SubmittedAt.Sub(node.PullRequest.CreatedAt).Seconds())
+				if diff > 0 {
+					timeToReview = &diff
+				}
+				r := &models.Review{
+					UserID:         user.ID,
+					GitHubReviewID: node.DatabaseID,
+					RepoFullName:   node.PullRequest.Repository.NameWithOwner,
+					PRNumber:       node.PullRequest.Number,
+					PRTitle:        node.PullRequest.Title,
+					State:          node.State,
+					SubmittedAt:    node.SubmittedAt,
+					TimeToReview:   timeToReview,
+				}
+				if err := w.store.UpsertReview(ctx, r); err != nil {
+					log.Printf("upsert review %d: %v", node.DatabaseID, err)
+				}
+			}
+			if !hasNext {
+				break
+			}
+			cursor = next
 		}
-		cursor = next
 	}
 	return nil
 }

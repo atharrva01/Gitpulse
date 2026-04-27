@@ -33,8 +33,8 @@ func (s *Store) GetWrappedStats(ctx context.Context, userID int64, year int) (*m
 	}
 	err = s.db.GetContext(ctx, &totals, `
 		SELECT COUNT(*) AS total_prs,
-		       COALESCE(SUM(additions),0) AS total_additions,
-		       COALESCE(SUM(deletions),0) AS total_deletions,
+		       COALESCE(SUM(LEAST(additions, 10000)),0) AS total_additions,
+		       COALESCE(SUM(LEAST(deletions, 10000)),0) AS total_deletions,
 		       COUNT(DISTINCT repo_full_name) AS unique_repos
 		FROM pull_requests
 		WHERE user_id=$1 AND state='merged' AND merged_at >= $2 AND merged_at < $3`,
@@ -113,12 +113,19 @@ func (s *Store) GetWrappedStats(ctx context.Context, userID int64, year int) (*m
 	err = s.db.SelectContext(ctx, &streakDays, `
 		SELECT day FROM streak_days
 		WHERE user_id=$1 AND day >= $2 AND day < $3
+		  AND (has_commit = true OR has_pr = true)
 		ORDER BY day`, userID, start, end)
 	if err == nil && len(streakDays) > 0 {
 		longest := 1
 		run := 1
 		for i := 1; i < len(streakDays); i++ {
-			if streakDays[i].Day.Sub(streakDays[i-1].Day) == 24*time.Hour {
+			prev := streakDays[i-1].Day.UTC().Format("2006-01-02")
+			curr := streakDays[i].Day.UTC().Format("2006-01-02")
+			prevNext := func() string {
+				t, _ := time.Parse("2006-01-02", prev)
+				return t.AddDate(0, 0, 1).Format("2006-01-02")
+			}()
+			if curr == prevNext {
 				run++
 				if run > longest {
 					longest = run

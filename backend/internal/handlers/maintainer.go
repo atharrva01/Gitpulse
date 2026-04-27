@@ -4,6 +4,7 @@ import (
 	"context"
 	"log"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -78,7 +79,7 @@ func (h *MaintainerHandler) AddWatched(c *gin.Context) {
 }
 
 func (h *MaintainerHandler) RemoveWatched(c *gin.Context) {
-	repo := c.Param("repo")
+	repo, _ := url.PathUnescape(c.Param("repo"))
 	if err := h.store.RemoveWatchedRepo(c.Request.Context(), userID(c), repo); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
